@@ -14,4 +14,7 @@ All notable changes to this project will be documented in this file.
   - Ensure ext4/xfs/btrfs/bcachefs tool coverage in all profiles
 - Docs: update Tools-Included.md to reflect new filesystem tools and ZFS userland
 - Docs: update TODO.md and mark completed items (hashed password support in installers; CI flake checks; CIFS/NFS; ZFS userland)
+- Docs: README rewrite with upstream credits, install/recovery overview, and included tooling
+- Docs: README formatting fix for installer example (use fenced code block)
+- Docs: Prefer scripts/build-iso.sh helper for building ISOs; keep manual nix build commands as advanced fallback
 
