@@ -1,0 +1,157 @@
+{
+  "repo": {
+    "path": "/home/dwilliams/nix-iso",
+    "purpose": "Build custom NixOS installation ISO images (unstable)",
+    "profiles": ["nixos-minimal", "nixos-gnome", "nixos-cosmic"]
+  },
+  "inputs": {
+    "nixpkgs": "nixpkgs/nixos-unstable",
+    "bcachefs-tools": "github:koverstreet/bcachefs-tools (follows nixpkgs)",
+    "chaotic": "github:chaotic-cx/nyx/nyxpkgs-unstable (no follows to avoid rebuilds)"
+  },
+  "nixConfig": {
+    "extra-substituters": [
+      "https://nyx.chaotic.cx/",
+      "https://nix-community.cachix.org"
+    ],
+    "extra-trusted-public-keys": [
+      "nyx.chaotic.cx-1:HfnXSw4pj95iI/n17rIDy40agHj12WfF+Gqk6SonIT8=",
+      "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
+    ]
+  },
+  "flake_outputs": {
+    "formatter": "nixfmt-rfc-style (x86_64-linux)",
+    "nixosConfigurations": {
+      "nixos-gnome": {
+        "modules": ["./gnome"],
+        "type": "graphical",
+        "imports": [
+          "${inputs.nixpkgs}/nixos/modules/installer/cd-dvd/installation-cd-graphical-gnome.nix",
+          "${inputs.nixpkgs}/nixos/modules/installer/cd-dvd/channel.nix",
+          "../common.nix"
+        ],
+        "profile_settings": {
+          "hostName": "nixos-gnome",
+          "networkmanager.enable": true,
+          "hardware.bluetooth.enable": true,
+          "environment.systemPackages": ["gparted", "google-chrome"]
+        }
+      },
+      "nixos-cosmic": {
+        "modules": ["./cosmic"],
+        "type": "graphical (COSMIC)",
+        "imports": [
+          "${inputs.nixpkgs}/nixos/modules/installer/cd-dvd/channel.nix",
+          "${inputs.nixpkgs}/nixos/modules/installer/cd-dvd/installation-cd-graphical-base.nix",
+          "../common.nix"
+        ],
+        "profile_settings": {
+          "hostName": "nixos-cosmic",
+          "networkmanager.enable": true,
+          "hardware.bluetooth.enable": true,
+          "services.desktopManager.cosmic.enable": true,
+          "services.desktopManager.cosmic.xwayland.enable": true,
+          "services.displayManager.cosmic-greeter.enable": true,
+          "services.displayManager.autoLogin": { "enable": true, "user": "nixos" },
+          "environment.systemPackages": ["gparted", "google-chrome"]
+        }
+      },
+      "nixos-minimal": {
+        "modules": ["./minimal"],
+        "type": "minimal",
+        "imports": [
+          "${inputs.nixpkgs}/nixos/modules/installer/cd-dvd/installation-cd-minimal.nix",
+          "../common.nix"
+        ],
+        "profile_settings": {
+          "hostName": "nixos-minimal"
+        }
+      }
+    }
+  },
+  "common_module": {
+    "file": "common.nix",
+    "imports": ["inputs.chaotic.nixosModules.default"],
+    "nix_settings": {
+      "allowUnfree": true,
+      "environment.sessionVariables": { "NIXPKGS_ALLOW_UNFREE": "1" },
+      "nix.settings.experimental-features": ["nix-command", "flakes"]
+    },
+    "overlays": [
+      "bcachefs-tools from inputs.bcachefs-tools.packages.${pkgs.system}.bcachefs-tools"
+    ],
+    "kernel_and_fs": {
+      "boot.kernelPackages": "pkgs.linuxPackages_cachyos",
+      "boot.zfs.package": "pkgs.zfs_cachyos (mkOverride 99)",
+      "boot.supportedFilesystems": [
+        "btrfs", "vfat", "f2fs", "xfs", "ntfs", "cifs", "bcachefs", "ext4", "zfs"
+      ]
+    },
+    "base_packages": [
+      "vim", "git", "curl", "parted", "efibootmgr"
+    ]
+  },
+  "ci": {
+    "workflows": {
+      "build-and-release.yml": {
+        "build": {
+          "action": "env NIXPKGS_ALLOW_BROKEN=1 nix build .#nixosConfigurations.nixos-minimal.config.system.build.isoImage --impure",
+          "runner": "ubuntu-latest",
+          "notes": "Prepares /nix on runner; uses nix flakes; uploads ISO artifact"
+        },
+        "release": {
+          "action": "automatic release upload",
+          "artifact": "result/iso/",
+          "tag": "github.run_id (continuous build)"
+        }
+      },
+      "check-flake.yml": {
+        "action": "nix flake check",
+        "on": ["push", "pull_request", "workflow_dispatch"]
+      },
+      "update-flake.yml": {
+        "action": "nix flake update (weekly schedule)",
+        "triggers": ["manual", "schedule", "push to flake.nix"]
+      }
+    }
+  },
+  "build_commands_examples": {
+    "gnome": "env NIXPKGS_ALLOW_BROKEN=1 nix build .#nixosConfigurations.nixos-gnome.config.system.build.isoImage --impure",
+    "cosmic": "env NIXPKGS_ALLOW_BROKEN=1 nix build .#nixosConfigurations.nixos-cosmic.config.system.build.isoImage --impure",
+    "minimal": "env NIXPKGS_ALLOW_BROKEN=1 nix build .#nixosConfigurations.nixos-minimal.config.system.build.isoImage --impure",
+    "result_iso_dir": "./result/iso/"
+  },
+  "extension_points": {
+    "add_packages_globally": "common.nix -> environment.systemPackages",
+    "add_packages_per_profile": "<profile>/default.nix -> environment.systemPackages",
+    "allow_unfree": "Already enabled globally in common.nix",
+    "add_custom_scripts": [
+      "Use pkgs.stdenv.mkDerivation to install files from a scripts/ directory into $out/bin and include in environment.systemPackages (avoids escaping)",
+      "Or add files via environment.etc.\"/path\".text for simple config files"
+    ],
+    "add_config_files": [
+      "environment.etc.\"/path/in/etc\".text = ''...'';",
+      "services.* options for daemon configs (e.g., openssh, nfs-utils)"
+    ],
+    "networking": "Profiles already enable NetworkManager (graphical). Add to minimal if needed.",
+    "kernel": "Set or change kernelPackages in common.nix",
+    "cosmic_login": "Auto-login user is 'nixos' for live session (in cosmic.nix)"
+  },
+  "requested_extras_mapping": {
+    "sed": "pkgs.gnused",
+    "awk": "pkgs.gawk",
+    "vim": "pkgs.vim",
+    "cat": "pkgs.coreutils",
+    "git": "pkgs.git",
+    "curl": "pkgs.curl",
+    "pciutils": "pkgs.pciutils",
+    "btrfs": "pkgs.btrfs-progs",
+    "nfs_client": "pkgs.nfs-utils"
+  },
+  "risk_notes": {
+    "chaotic_module": "Pulls third-party kernel and ZFS builds; verify cache trust and provenance",
+    "NIXPKGS_ALLOW_BROKEN": "Build flag is used in README/CI; downstream instability possible",
+    "unfree_software": "Enabled globally; verify licensing implications in redistributed ISO"
+  }
+}
+
