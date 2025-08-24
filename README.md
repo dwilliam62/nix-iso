@@ -2,10 +2,11 @@
 
 This repository contains configuration files for building a custom NixOS ISO. The ISO is based on the `nixos-unstable` repository and includes the latest Zen kernel (6.8+) with support for the latest filesystems, including `bcachefs`, `btrfs`, `ext4`.
 
-Two types of ISO can be built:-
+Three profiles are available and all include a full recovery toolset by default:
 
-* Graphical
 * Minimal
+* GNOME (graphical)
+* COSMIC (graphical, experimental)
 
 See different instructions below.
 
@@ -20,7 +21,7 @@ To build the custom NixOS ISO, follow these steps:
 3. Run the build command.
 
 ```bash
-git clone https://github.com/JohnRTitor/nix-iso.git
+git clone https://github.com/dwilliam62/nix-iso.git
 cd nix-iso
 ```
 

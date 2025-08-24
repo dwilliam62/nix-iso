@@ -6,10 +6,10 @@ This repo builds custom NixOS installation ISOs (unstable) with three profiles:
 - COSMIC (nixos-cosmic)
 
 How it’s wired
-- flake.nix defines three nixosConfigurations, each importing a profile module:
-  - minimal/default.nix imports the minimal installer module + common.nix
-  - gnome/default.nix imports the GNOME installer modules + common.nix
-  - cosmic/default.nix imports cosmic/cosmic.nix + common.nix
+- flake.nix defines three nixosConfigurations, each importing a profile module plus the shared recovery toolset:
+  - minimal/default.nix imports the minimal installer module + common.nix + recovery/recovery-tools.nix
+  - gnome/default.nix imports the GNOME installer modules + common.nix + recovery/recovery-tools.nix
+  - cosmic/default.nix imports cosmic/cosmic.nix + common.nix + recovery/recovery-tools.nix
 - common.nix is shared across profiles. It:
   - imports the chaotic nyx module
   - enables flakes/nix-command and unfree
@@ -54,6 +54,7 @@ Adding complex scripts (without escaping hell)
   '';
 
 Notes and gotchas
+- All profiles include the full recovery toolset by default via recovery/recovery-tools.nix.
 - The repo pulls kernel/ZFS from chaotic nyx; verify caches in flake.nix’s nixConfig.
 - README uses NIXPKGS_ALLOW_BROKEN=1; if builds fail, try without it or pin inputs.
 - COSMIC profile autologins user "nixos" on the live ISO.
@@ -65,6 +66,8 @@ Build commands
 - Minimal: env NIXPKGS_ALLOW_BROKEN=1 nix build .#nixosConfigurations.nixos-minimal.config.system.build.isoImage --impure
 - GNOME:   env NIXPKGS_ALLOW_BROKEN=1 nix build .#nixosConfigurations.nixos-gnome.config.system.build.isoImage --impure
 - COSMIC:  env NIXPKGS_ALLOW_BROKEN=1 nix build .#nixosConfigurations.nixos-cosmic.config.system.build.isoImage --impure
+
+All profiles include the recovery toolset by default.
 
 Next steps (if you want me to implement now)
 - Add requested tools globally in common.nix (gnused, gawk, neovim, coreutils, git, curl, pciutils, btrfs-progs)

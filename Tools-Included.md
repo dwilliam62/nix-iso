@@ -1,6 +1,6 @@
-# Tools Included on the Recovery ISO
+# Live ISO Toolset (included in all profiles)
 
-This document lists the tooling included on the nixos-recovery ISO profile, grouped by category.
+This document lists the tooling included on all ISO profiles (minimal, GNOME, COSMIC), grouped by category.
 
 Core CLI
 - coreutils (cat, ls, etc.)
@@ -40,6 +40,6 @@ Btrfs Snapshot & Backup Tooling
 - btrfsmaintenance
 
 Notes
-- The recovery ISO also packages scripts/ into $PATH (e.g. install-btrfs.sh).
+- The live ISOs package scripts/ into $PATH (e.g. install-btrfs.sh).
 - The live ISO enables sshd with password auth for convenience (change after install).
-- Base ISO profiles (minimal/gnome/cosmic) inherit baseline tools from common.nix, but the recovery profile is the superset intended for install and rescue workflows.
+- The recovery toolset is included by default in all profiles; the dedicated recovery profile is maintained for compatibility but reuses the same module.

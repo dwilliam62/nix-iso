@@ -14,6 +14,7 @@
   imports = [
     "${inputs.nixpkgs}/nixos/modules/installer/cd-dvd/installation-cd-minimal.nix"
     ../common.nix
+    ../recovery/recovery-tools.nix
   ];
 
   networking.hostName = "nixos-minimal"; # set live session hostname

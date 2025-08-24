@@ -15,6 +15,7 @@
     "${inputs.nixpkgs}/nixos/modules/installer/cd-dvd/installation-cd-graphical-gnome.nix"
     "${inputs.nixpkgs}/nixos/modules/installer/cd-dvd/channel.nix"
     ../common.nix
+    ../recovery/recovery-tools.nix
   ];
 
   networking.hostName = "nixos-gnome"; # set live session hostname

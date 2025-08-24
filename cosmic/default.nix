@@ -6,6 +6,7 @@
   imports = [
     ./cosmic.nix
     ../common.nix
+    ../recovery/recovery-tools.nix
   ];
 
   networking.hostName = "nixos-cosmic"; # set live session hostname
