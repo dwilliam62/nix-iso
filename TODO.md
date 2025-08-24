@@ -28,3 +28,12 @@ Docs & UX
 CI/CD
 - [ ] Add CI job to build nixos-recovery ISO artifact on pushes to the branch
 - [ ] Add flake checks for recovery profile (nix flake check)
+
+Filesystem Coverage
+- [ ] Ensure complete tooling and live support for major filesystems:
+  - [ ] EXT4: e2fsprogs (fsck.ext4, resize2fs, tune2fs, etc.)
+  - [ ] XFS: xfsprogs (xfs_repair, xfs_growfs, etc.)
+  - [ ] Bcachefs: bcachefs-tools
+  - [ ] ZFS: userland tools (zfs, zpool) and kernel module availability on the live ISO (align with boot.zfs.package)
+- [ ] Verify mounting/repair workflows from the live ISO and document in HOWTO/Tools-Included
+- [ ] Consider adding cifs-utils for SMB/CIFS mounts (in addition to nfs-utils)
