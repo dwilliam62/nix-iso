@@ -1,60 +1,73 @@
-# Nix-ISO HOWTO
+# Nix-ISO repo at a glance
 
-This guide explains how to build and use the custom NixOS ISOs in this repo, with a focus on the new recovery ISO that includes an installer and a comprehensive toolset.
-
-Profiles
+This repo builds custom NixOS installation ISOs (unstable) with three profiles:
 - Minimal (nixos-minimal)
 - GNOME (nixos-gnome)
 - COSMIC (nixos-cosmic)
-- Recovery (nixos-recovery) — recommended for install and rescue workflows
 
-Build the ISO (simple)
-- Use the wrapper script (sets env and prints friendly messages):
-  - ./scripts/build-iso.sh nixos-recovery
-  - Defaults to nixos-recovery if you omit the argument
-- Output appears in ./result/iso/
-
-Build the ISO (manual)
-- env NIXPKGS_ALLOW_BROKEN=1 nix build .#nixosConfigurations.nixos-recovery.config.system.build.isoImage --impure
-
-What’s in the Recovery ISO
-- All core install and rescue tools, categorized in Tools-Included.md
-- sshd enabled in the live environment for remote assistance (password auth allowed on live ISO)
-- Packaged scripts in $PATH (see scripts/), including an interactive Btrfs installer:
-  - install-btrfs.sh: guided Btrfs install with subvolumes (@, @home, @nix, @snapshots)
-
-Use the Recovery ISO to install NixOS
-1) Boot the ISO
-2) (Optional) SSH in as nixos user (passwordless by default) or work locally
-3) Run the installer:
-   - sudo install-btrfs.sh
-   - It will prompt you for timezone, keymap, hostname, username
-   - It will list disks, ask you to pick one, and require typing INSTALL to confirm
-   - It partitions (ESP 1 GiB + Btrfs), creates subvolumes, mounts with zstd+discard, generates configs, writes a safe configuration.nix, then runs nixos-install (you will be prompted to set root password)
-4) Reboot into your installed system
-
-Rescue with the Recovery ISO
-- Disk health: smartctl, nvme-cli, hdparm, lshw
-- Imaging: ddrescue, pv
-- Filesystem repair: btrfs-progs, e2fsprogs, xfsprogs, ntfs3g, exfatprogs, dosfstools
-- Encryption/RAID/LVM: cryptsetup, mdadm, lvm2
-- Snapshots/backups: snapper, btrbk, grub-btrfs, btrfsmaintenance
-- Bootloader tools: efibootmgr (and grub-btrfs integration)
-- Network tools: ssh, curl, wget, rsync, iproute2/iputils
+How it’s wired
+- flake.nix defines three nixosConfigurations, each importing a profile module:
+  - minimal/default.nix imports the minimal installer module + common.nix
+  - gnome/default.nix imports the GNOME installer modules + common.nix
+  - cosmic/default.nix imports cosmic/cosmic.nix + common.nix
+- common.nix is shared across profiles. It:
+  - imports the chaotic nyx module
+  - enables flakes/nix-command and unfree
+  - overlays bcachefs-tools from the upstream repo
+  - switches to the CachyOS kernel and ZFS variant
+  - enables many filesystems
+  - installs base tools (vim, git, curl, parted, efibootmgr)
 
 Where to add packages
 - Global (all ISOs): common.nix -> environment.systemPackages
 - Per-profile: <profile>/default.nix -> environment.systemPackages
+  - Example (minimal/default.nix):
+    environment.systemPackages = with pkgs; [ gnused gawk neovim coreutils git curl pciutils btrfs-progs ];
 
-Add complex scripts (without escaping)
-- Put scripts in scripts/ and they are packaged automatically on the recovery ISO
-- See scripts/README.md for installer usage; future scripts can be added similarly
+Adding complex scripts (without escaping hell)
+- Put your scripts in a scripts/ directory in the repo, as plain files.
+- Package them with a small derivation and add to environment.systemPackages.
+  Example overlay module:
 
-Notes & Gotchas
-- Chaotic nyx module supplies the CachyOS kernel and ZFS; trust/caches configured in flake.nix
-- Flakes and nix-command enabled; unfree allowed in common.nix
-- The installer’s generated configuration uses sudo wheelNeedsPassword = true and does not grant passwordless sudo
+  {
+    pkgs, lib, ...
+  }:
+  let
+    myTools = pkgs.stdenv.mkDerivation {
+      pname = "iso-tools";
+      version = "1.0";
+      src = ./scripts; # directory with your scripts
+      installPhase = ''
+        mkdir -p $out/bin
+        # install without escaping; keeps your original scripts intact
+        cp -r $src/* $out/bin/
+        chmod -R +x $out/bin
+      '';
+    };
+  in {
+    environment.systemPackages = [ myTools ];
+  }
+
+- Place configs via environment.etc if needed:
+  environment.etc."myapp/config.toml".text = ''
+    # your config
+  '';
+
+Notes and gotchas
+- The repo pulls kernel/ZFS from chaotic nyx; verify caches in flake.nix’s nixConfig.
+- README uses NIXPKGS_ALLOW_BROKEN=1; if builds fail, try without it or pin inputs.
+- COSMIC profile autologins user "nixos" on the live ISO.
 
 CI
-- Existing workflows build minimal ISO; add a job to build nixos-recovery in CI as a future task (see TODO.md)
+- .github/workflows builds minimal ISO and publishes artifacts on GitHub.
+
+Build commands
+- Minimal: env NIXPKGS_ALLOW_BROKEN=1 nix build .#nixosConfigurations.nixos-minimal.config.system.build.isoImage --impure
+- GNOME:   env NIXPKGS_ALLOW_BROKEN=1 nix build .#nixosConfigurations.nixos-gnome.config.system.build.isoImage --impure
+- COSMIC:  env NIXPKGS_ALLOW_BROKEN=1 nix build .#nixosConfigurations.nixos-cosmic.config.system.build.isoImage --impure
+
+Next steps (if you want me to implement now)
+- Add requested tools globally in common.nix (gnused, gawk, neovim, coreutils, git, curl, pciutils, btrfs-progs)
+- Create scripts/ with your complex scripts; add the packaging module so they land in the ISO
+- Optional: add environment.etc entries for configs you want present on the ISO
 
