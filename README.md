@@ -1,135 +1,93 @@
-# NixOS ISO Configuration Repository
+# ddubsos NixOS Install/Recovery ISOs
 
-This repository contains configuration files for building a custom NixOS ISO. The ISO is based on the `nixos-unstable` repository and includes the latest Zen kernel (6.8+) with support for the latest filesystems, including `bcachefs`, `btrfs`, `ext4`.
+Custom NixOS install and recovery ISOs based on nixos-unstable, with a focus on modern filesystem support (Btrfs, ZFS, XFS, ext4, bcachefs) and a robust recovery toolset.
 
-Three profiles are available and all include a full recovery toolset by default:
+Credits
+- This repository is a derivative of, and heavily inspired by, the work in JohnRTitor/nix-iso.
+  - Upstream project: https://github.com/JohnRTitor/nix-iso
+- We maintain a fork with our own profiles, tooling, and documentation tailored for rescue and repeatable installs.
 
-* Minimal
-* GNOME (graphical)
-* COSMIC (graphical, experimental)
+What this project provides
+- Multiple ISO profiles, all including the recovery toolset by default:
+  - Minimal (nixos-minimal)
+  - GNOME (nixos-gnome)
+  - COSMIC (nixos-cosmic, experimental)
+  - Recovery (nixos-recovery)
+- Modern kernel and ZFS package selection via chaotic nyx for broader hardware/filesystem support.
+- Full filesystem tooling for installs and rescue:
+  - Btrfs: btrfs-progs (subvolumes @, @home, @nix, @snapshots)
+  - ext4: e2fsprogs
+  - XFS: xfsprogs
+  - bcachefs: bcachefs-tools (mkfs with zstd compression support)
+  - ZFS: userland (zpool, zfs) sourced from config.boot.zfs.package for kernel compatibility
+  - NFS/SMB: nfs-utils, cifs-utils
+  - Plus: ntfs3g, exfatprogs, dosfstools
+- Recovery/imaging and diagnostics: ddrescue, testdisk, smartmontools, nvme-cli, hdparm, pciutils/usbutils, and more.
+- All profiles bundle the scripts/ directory into $PATH on the live ISO for convenience.
 
-See different instructions below.
+Destructive operations warning
+- The installer scripts will repartition and format the selected disk. This destroys all data on that disk.
+- Read all prompts carefully. The scripts require typing INSTALL to proceed as a safety check.
 
-Interactive installers (single-disk, UEFI)
-- This repo provides interactive installer scripts for multiple filesystems under scripts/:
-  - install-btrfs.sh (default in this repo)
-  - install-ext4.sh
-  - install-xfs.sh
-  - install-bcachefs.sh (with zstd compression)
-  - install-zfs.sh (zstd compression, safe defaults, generates hostId)
-- Run them from a live environment after cloning this repo:
+How to build the ISOs
+- Prereqs: enable flakes and accept flake config (see below for cache settings).
+- Clone and build:
+  - git clone https://github.com/dwilliam62/nix-iso.git
+  - cd nix-iso
+  - Minimal: env NIXPKGS_ALLOW_BROKEN=1 nix build .#nixosConfigurations.nixos-minimal.config.system.build.isoImage --impure
+  - GNOME:   env NIXPKGS_ALLOW_BROKEN=1 nix build .#nixosConfigurations.nixos-gnome.config.system.build.isoImage --impure
+  - COSMIC:  env NIXPKGS_ALLOW_BROKEN=1 nix build .#nixosConfigurations.nixos-cosmic.config.system.build.isoImage --impure
+  - Recovery: env NIXPKGS_ALLOW_BROKEN=1 nix build .#nixosConfigurations.nixos-recovery.config.system.build.isoImage --impure
+- Result: the ISO image will be in ./result/iso/
 
-```
-sudo scripts/install-btrfs.sh      # or install-ext4.sh, install-xfs.sh, install-bcachefs.sh, install-zfs.sh
-```
-
-Notes
-- All installers partition GPT: 1GiB ESP (FAT32) + remainder as the selected filesystem.
-- Btrfs uses subvolumes (@, @home, @nix, @snapshots) and zstd compression.
-- bcachefs is formatted with --compression=zstd.
-- ZFS pool is created with zstd compression and sensible defaults; datasets use legacy mountpoints and a hostId is generated for initrd import.
-- ext4 and XFS do not have transparent compression; fstrim is enabled in configuration.
-
-## Getting Started
-
-This guide assumes that you have `nix` setup in your system or/and are using NixOS.
-
-To build the custom NixOS ISO, follow these steps:
-
-1. Clone this repository to your local machine.
-2. Navigate to the repository directory.
-3. Run the build command.
-
-```bash
-git clone https://github.com/dwilliam62/nix-iso.git
-cd nix-iso
-```
-
-### For building full GNOME ISO
-
-```bash
-env NIXPKGS_ALLOW_BROKEN=1 nix build .#nixosConfigurations.nixos-gnome.config.system.build.isoImage --impure
-```
-
-### For building full Cosmic ISO (EXPERIMENTAL)
-
-```bash
-env NIXPKGS_ALLOW_BROKEN=1 nix build .#nixosConfigurations.nixos-cosmic.config.system.build.isoImage --impure
-```
-
-### For building minimal ISO
-
-```bash
-env NIXPKGS_ALLOW_BROKEN=1 nix build .#nixosConfigurations.nixos-minimal.config.system.build.isoImage --impure
-```
-
-Ensure that flakes and nix-command are enabled on the host system before building the ISO.
-
-The resulting ISO image can be found in the `./result/iso/` directory.
-
-Host prerequisites (binary caches)
-To avoid building large dependencies (like the kernel and ZFS) from source, configure your host to trust the binary caches used by this flake.
+Binary caches (strongly recommended)
+- To avoid building the kernel and ZFS from source, configure caches on the build host:
 
 NixOS (recommended)
-Add this to your /etc/nixos/configuration.nix and rebuild (sudo nixos-rebuild switch):
-
-nix.settings = {
-  experimental-features = [ "nix-command" "flakes" ];
-  accept-flake-config = true;
-  substituters = [
-    "https://cache.nixos.org"
-    "https://nix-community.cachix.org"
-    "https://nyx.chaotic.cx/"
-  ];
-  trusted-public-keys = [
-    "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
-    "nyx.chaotic.cx-1:HfnXSw4pj95iI/n17rIDy40agHj12WfF+Gqk6SonIT8="
-  ];
-};
+  nix.settings = {
+    experimental-features = [ "nix-command" "flakes" ];
+    accept-flake-config = true;
+    substituters = [
+      "https://cache.nixos.org"
+      "https://nix-community.cachix.org"
+      "https://nyx.chaotic.cx/"
+    ];
+    trusted-public-keys = [
+      "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
+      "nyx.chaotic.cx-1:HfnXSw4pj95iI/n17rIDy40agHj12WfF+Gqk6SonIT8="
+    ];
+  };
 
 Non-NixOS (multi-user daemon)
-Edit /etc/nix/nix.conf and restart nix-daemon:
+  accept-flake-config = true
+  substituters = https://cache.nixos.org https://nix-community.cachix.org https://nyx.chaotic.cx/
+  trusted-public-keys = nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs= nyx.chaotic.cx-1:HfnXSw4pj95iI/n17rIDy40agHj12WfF+Gqk6SonIT8=
 
-accept-flake-config = true
-substituters = https://cache.nixos.org https://nix-community.cachix.org https://nyx.chaotic.cx/
-trusted-public-keys = nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs= nyx.chaotic.cx-1:HfnXSw4pj95iI/n17rIDy40agHj12WfF+Gqk6SonIT8=
+Using the installer scripts (on the live ISO or any NixOS live env)
+- Available scripts in scripts/:
+  - install-btrfs.sh — Btrfs with subvolumes @, @home, @nix, @snapshots; zstd compression
+  - install-ext4.sh — ext4 installer (enable fstrim in config)
+  - install-xfs.sh — XFS installer (enable fstrim in config)
+  - install-bcachefs.sh — bcachefs with --compression=zstd
+  - install-zfs.sh — ZFS with sensible defaults; legacy mountpoints; generates networking.hostId
+- Run as root; the scripts will self-elevate via sudo when possible:
+  sudo ./scripts/install-btrfs.sh
+  # or install-ext4.sh, install-xfs.sh, install-bcachefs.sh, install-zfs.sh
 
-Non-NixOS (single-user)
-Edit ~/.config/nix/nix.conf with the same settings as above.
+Notes on defaults
+- Partitioning: GPT with 1 GiB EFI System Partition (FAT32) + remainder for the chosen filesystem.
+- Bootloader: systemd-boot on UEFI.
+- zswap: enabled via kernelParams (zstd, z3fold) for broad compatibility.
+- Users: scripts prompt for a user and hash the password with openssl -6 if available.
+- Generated configuration: includes a reasonable base set of tools and enables NetworkManager and SSH.
 
-One-shot build (no file edits)
-Pass options to nix build:
+Included tools overview
+- See Tools-Included.md for the complete, up-to-date list of tools packaged into the live ISO.
+- Documentation is available on the live ISO under /etc/ddubsos-docs (README.md, HOWTO.md, Tools-Included.md, docs/*).
 
-nix build .#nixosConfigurations.nixos-cosmic.config.system.build.isoImage \
-  --impure --accept-flake-config \
-  --option substituters "https://cache.nixos.org https://nix-community.cachix.org https://nyx.chaotic.cx/" \
-  --option trusted-public-keys "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs= nyx.chaotic.cx-1:HfnXSw4pj95iI/n17rIDy40agHj12WfF+Gqk6SonIT8="
+License and contributions
+- Licensed under Apache-2.0 (see LICENSE). Third-party software remains under their respective licenses.
+- Contributions are welcome via issues and PRs.
 
-Output filename convention:
-- nixos-ddubsos-<profile>-<version>-<arch>.iso
-  - profile: minimal | gnome | cosmic | recovery
-  - version: from config.system.nixos.label (e.g., 25.05.yyyyMMdd)
-  - arch: e.g., x86_64-linux
-
-## License
-
-The configuration files in this repository are licensed under the Apache 2.0 License. However, softwares used in conjunction with these configuration files are owned by their respective owners. Please ensure to comply with the licensing terms of all used software.
-
-## Contributing
-
-Contributions to this repository are welcome. Please feel free to open an issue or submit a pull request.
-
-## Disclaimer
-
-While every effort has been made to ensure these configuration files work as expected, they are provided "as is". Please use at your own risk.
-
-Please note that this guide assumes you have a basic understanding of NixOS and the Nix package manager. If you are new to Nix or NixOS, you may want to check out the [Nix manual](https://nixos.org/manual/nix/stable/) for more information.
-
-## Now, the question is, why?...
-
-A week ago, I had to make an ISO image to support `bcachefs` filesystem because official ISO releases back then did not have the latest kernel.
-I quickly looked up the docs, put together a shaky configuration to build it for myself.
-Have been using the system with Bcachefs since and it is chill af.
-Figured some people might be in a similar situation, so here we are...
-
-I also provide minimal ISO builds via this repo (check Releases). May be outdated though by the time you are reading this, ping me up by creating an issue, I'll provide an updated release ASAP.
+Disclaimer
+- While we strive for safe defaults, use at your own risk. Always back up important data before running destructive operations.
