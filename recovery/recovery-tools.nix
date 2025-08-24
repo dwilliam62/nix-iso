@@ -1,5 +1,28 @@
 # Recovery tooling and live ISO conveniences shared by all profiles
 { config, lib, pkgs, ... }:
+let
+  ddubsosDocs = pkgs.stdenv.mkDerivation {
+    pname = "ddubsos-docs";
+    version = "1.0";
+    src = ../.;
+    dontBuild = true;
+    installPhase = ''
+      set -euo pipefail
+      dst="$out/share/ddubsos-docs"
+      mkdir -p "$dst"
+      for f in README.md HOWTO.md Tools-Included.md; do
+        if [ -f "$src/$f" ]; then cp "$src/$f" "$dst/"; fi
+      done
+      if [ -d "$src/docs" ]; then
+        cp -r "$src/docs" "$dst/docs"
+      fi
+      if [ -f "$src/scripts/README.md" ]; then
+        mkdir -p "$dst/scripts"
+        cp "$src/scripts/README.md" "$dst/scripts/"
+      fi
+    '';
+  };
+in
 {
   # Network and convenience services for live environments
   networking.networkmanager.enable = true;
@@ -28,27 +51,6 @@
       '';
     };
 
-    ddubsosDocs = pkgs.stdenv.mkDerivation {
-      pname = "ddubsos-docs";
-      version = "1.0";
-      src = ../.;
-      dontBuild = true;
-      installPhase = ''
-        set -euo pipefail
-        dst="$out/share/ddubsos-docs"
-        mkdir -p "$dst"
-        for f in README.md HOWTO.md Tools-Included.md; do
-          if [ -f "$src/$f" ]; then cp "$src/$f" "$dst/"; fi
-        done
-        if [ -d "$src/docs" ]; then
-          cp -r "$src/docs" "$dst/docs"
-        fi
-        if [ -f "$src/scripts/README.md" ]; then
-          mkdir -p "$dst/scripts"
-          cp "$src/scripts/README.md" "$dst/scripts/"
-        fi
-      '';
-    };
   in [
     recoveryScripts
     ddubsosDocs
