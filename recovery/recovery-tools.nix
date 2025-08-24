@@ -64,7 +64,7 @@ in
 
     # Networking/transfer
     curl wget rsync openssh iproute2 iputils mtr traceroute nmap socat netcat-openbsd
-    jq yq-go
+    jq yq-go openssl
 
     # Storage/filesystems & recovery
     parted gptfdisk efibootmgr
@@ -134,7 +134,7 @@ in
       # Handy tools inside the installed system as well (trim as needed)
       environment.systemPackages = with pkgs; [
         neovim vim gnused gawk ripgrep gnugrep findutils coreutils
-        curl wget pciutils btrfs-progs
+        curl wget pciutils btrfs-progs openssl
         htop btop atop
       ];
 

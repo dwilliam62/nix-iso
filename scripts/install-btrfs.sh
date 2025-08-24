@@ -46,14 +46,63 @@ KEYMAP=$(read_default "Console keymap (e.g., us, uk, de, fr)" "$KEYMAP")
 HOSTNAME=$(read_default "Hostname" "$HOSTNAME")
 USERNAME=$(read_default "Username" "$USERNAME")
 
+# Prompt for user password (used for the installed system account)
+USER_HASH=""
+if command -v openssl >/dev/null 2>&1; then
+  while true; do
+    read -rs -p "Password for user '$USERNAME': " USER_PW1; echo
+    read -rs -p "Confirm password for '$USERNAME': " USER_PW2; echo
+    if [ "$USER_PW1" != "$USER_PW2" ]; then
+      echo "Passwords do not match. Please try again." >&2
+      continue
+    fi
+    USER_HASH=$(printf %s "$USER_PW1" | openssl passwd -6 -stdin)
+    unset USER_PW1 USER_PW2
+    break
+  done
+else
+  echo "Warning: openssl not found; user '$USERNAME' will be created without a password. You can set it after first boot." >&2
+fi
+
 # Disk selection
 echo
 echo "Available disks:"
-# Show only real disks; format as /dev/<name>  <size>  <model>
-lsblk -dn -o NAME,SIZE,TYPE,MODEL | awk '$3=="disk" {printf "/dev/%s  %s  %s\n", $1, $2, $4}'
+# Build a numbered list for safer selection (handles virtio: vda)
+mapfile -t DISK_ROWS < <(lsblk -dn -o NAME,SIZE,TYPE,MODEL | awk '$3=="disk" {m=$4; if (m=="") m="-"; printf "%s\t%s\t%s\n", $1,$2,m}')
+if [ "${#DISK_ROWS[@]}" -eq 0 ]; then
+  echo "No disks detected. Are you running in a VM without storage, or missing permissions?" >&2
+  exit 1
+fi
+idx=1
+for row in "${DISK_ROWS[@]}"; do
+  name=$(echo "$row" | awk '{print $1}')
+  size=$(echo "$row" | awk '{print $2}')
+  model=$(echo "$row" | awk '{print $3}')
+  printf "[%d] /dev/%s  %s  %s\n" "$idx" "$name" "$size" "$model"
+  idx=$((idx+1))
+done
 echo
-read -r -p "Enter target disk (e.g., /dev/sda or /dev/nvme0n1): " DISK
+read -r -p "Select disk by number (1-${#DISK_ROWS[@]}) or enter device path (/dev/sdX, /dev/vdX, /dev/nvmeXnY): " choice
+if [[ "$choice" =~ ^/dev/ ]]; then
+  DISK="$choice"
+elif [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "${#DISK_ROWS[@]}" ]; then
+  sel_row="${DISK_ROWS[$((choice-1))]}"
+  sel_name=$(echo "$sel_row" | awk '{print $1}')
+  DISK="/dev/$sel_name"
+else
+  echo "Invalid selection: $choice" >&2
+  exit 1
+fi
+
+# Validate block device and write access (not read-only)
 [ -b "$DISK" ] || { echo "Not a block device: $DISK" >&2; exit 1; }
+if command -v blockdev >/dev/null 2>&1; then
+  ro=$(blockdev --getro "$DISK" || echo 1)
+  if [ "$ro" != "0" ]; then
+    echo "Device appears read-only: $DISK (blockdev --getro != 0). Check VM settings and permissions." >&2
+    exit 1
+  fi
+fi
 
 # Final confirmation
 echo
@@ -140,6 +189,7 @@ cat > "$CFG" <<NIXCONF
   users.users.${USERNAME} = {
     isNormalUser = true;
     extraGroups = [ "wheel" "networkmanager" "input" ];
+    ${USER_HASH:+initialHashedPassword = "${USER_HASH}";}
   };
 
   environment.systemPackages = with pkgs; [

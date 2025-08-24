@@ -32,6 +32,6 @@ Docs on the live ISO
 Notes
 - The script will destroy data on the selected disk. Read prompts carefully.
 - Subvolume layout includes /.snapshots for tools like snapper.
-- The script template does not set any user passwords; root password is set interactively by nixos-install.
+- The script will prompt for the new user's password and set it securely (hashed). Root password is set interactively by nixos-install.
 - After booting into the installed system, you can add snapper/btrbk/grub-btrfs configuration if desired.
 
