@@ -98,9 +98,7 @@ rpcbind.enable = true; };
 nixpkgs.config.allowUnfree = true; nix.settings.experimental-features = [
 "nix-command" "flakes" ];
 
-security.sudo = { enable = true; wheelNeedsPassword = false; extraRules = [ {
-users = [ "dwilliams" ]; commands = [ { command = "ALL"; options = [ "NOPASSWD"
-]; } ]; } ]; };
+security.sudo = { enable = true; wheelNeedsPassword = true; };
 
 system.stateVersion = "25.05"; } NIXCONF "'
 

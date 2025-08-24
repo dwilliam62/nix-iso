@@ -22,7 +22,23 @@
   };
 
   # Broad tooling for install/recovery workflows
-  environment.systemPackages = with pkgs; [
+  # Package the scripts/ directory into $out/bin to avoid escaping large scripts
+  # and make them available on the live ISO.
+  environment.systemPackages = with pkgs; let
+    recoveryScripts = pkgs.stdenv.mkDerivation {
+      pname = "recovery-scripts";
+      version = "1.0";
+      src = ../scripts;
+      dontBuild = true;
+      installPhase = ''
+        mkdir -p "$out/bin"
+        cp -r "$src"/* "$out/bin/" || true
+        chmod -R +x "$out/bin" || true
+      '';
+    };
+  in [
+    recoveryScripts
+
     # Core CLI
     coreutils gnused gawk gnugrep findutils ripgrep ugrep which file
     util-linux busybox
