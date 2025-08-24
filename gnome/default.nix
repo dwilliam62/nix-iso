@@ -30,6 +30,6 @@
   ];
 
   # Customize ISO filename to distinguish from standard NixOS ISOs
-  image.fileName = "nixos-ddubsos-gnome-${config.system.nixos.label}-${pkgs.stdenv.hostPlatform.system}.iso";
+  image.fileName = lib.mkForce "nixos-ddubsos-gnome-${config.system.nixos.label}-${pkgs.stdenv.hostPlatform.system}.iso";
   isoImage.isoName = lib.mkForce "nixos-ddubsos-gnome-${config.system.nixos.label}-${pkgs.stdenv.hostPlatform.system}.iso";
 }
