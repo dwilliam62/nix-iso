@@ -36,7 +36,6 @@ Hardware / Debug / Inspection
 Btrfs Snapshot & Backup Tooling
 - snapper
 - btrbk
-- btrfsmaintenance
 
 Notes
 - The live ISOs package scripts/ into $PATH (e.g. install-btrfs.sh).

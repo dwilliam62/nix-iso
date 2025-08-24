@@ -52,7 +52,7 @@
     zstd xz bzip2 gzip zip unzip pv
 
     # Btrfs snapshot/backup tooling (CLI)
-    snapper btrbk btrfsmaintenance
+    snapper btrbk
 
     # Hardware utils
     pciutils usbutils lshw lsof strace gdb

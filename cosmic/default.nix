@@ -21,5 +21,5 @@
   ];
 
   # Customize ISO filename to distinguish from standard NixOS ISOs
-  isoImage.isoName = "nixos-ddubsos-cosmic-${config.system.nixos.label}-${pkgs.stdenv.hostPlatform.system}.iso";
+  image.fileName = "nixos-ddubsos-cosmic-${config.system.nixos.label}-${pkgs.stdenv.hostPlatform.system}.iso";
 }
