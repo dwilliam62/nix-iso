@@ -64,6 +64,13 @@ else
   echo "Warning: openssl not found; user '$USERNAME' will be created without a password. You can set it after first boot." >&2
 fi
 
+# Prepare Nix line for initialHashedPassword with quotes preserved
+HASH_LINE=""
+if [ -n "${USER_HASH}" ]; then
+  ESC_HASH=${USER_HASH//\"/\\\"}
+  HASH_LINE="    initialHashedPassword = \"${ESC_HASH}\";"
+fi
+
 # Disk selection
 echo
 echo "Available disks:"
@@ -189,7 +196,7 @@ cat > "$CFG" <<NIXCONF
   users.users.${USERNAME} = {
     isNormalUser = true;
     extraGroups = [ "wheel" "networkmanager" "input" ];
-    ${USER_HASH:+initialHashedPassword = "${USER_HASH}";}
+${HASH_LINE:+${HASH_LINE}}
   };
 
   environment.systemPackages = with pkgs; [
