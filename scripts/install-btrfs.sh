@@ -81,17 +81,19 @@ mount -o subvolid=5 "$P2" /mnt
 btrfs subvolume create /mnt/@
 btrfs subvolume create /mnt/@home
 btrfs subvolume create /mnt/@nix
+btrfs subvolume create /mnt/@snapshots
 umount /mnt
 
-# Mount target
+# Mount target (include /.snapshots to aid tools like snapper)
 echo "\nMounting target ..."
 mount -o compress=zstd,discard=async,noatime,subvol=@ "$P2" /mnt
-mkdir -p /mnt/{home,nix,boot}
+mkdir -p /mnt/{home,nix,boot,.snapshots}
 mount -o compress=zstd,discard=async,noatime,subvol=@home "$P2" /mnt/home
 mount -o compress=zstd,discard=async,noatime,subvol=@nix "$P2" /mnt/nix
+mount -o compress=zstd,discard=async,noatime,subvol=@snapshots "$P2" /mnt/.snapshots
 mount "$P1" /mnt/boot
 
-# Generate hardware config
+# Generate hardware config (will include all mounted subvolumes)
 nixos-generate-config --root /mnt
 
 # Write configuration.nix
