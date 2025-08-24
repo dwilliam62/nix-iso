@@ -78,10 +78,10 @@
       console.keyMap = "us";
 
       # Users — default credentials for initial access; change after install
-      users.users.root.hashedPassword = "$6$8Lx54vMbGsfTnnsZ$qkivcncU38KrbshwoA1SKkSJBTf8AObsXtRsDiWuPw.TTNPDojkj/PKBQW2MqtSSwkCHcjkNXmQQy2YswQf3M1";
+      users.users.root.initialPassword = "NixOS_rulez!";
       users.users.dwilliams = {
         isNormalUser = true;
-        hashedPassword = "$6$8Lx54vMbGsfTnnsZ$qkivcncU38KrbshwoA1SKkSJBTf8AObsXtRsDiWuPw.TTNPDojkj/PKBQW2MqtSSwkCHcjkNXmQQy2YswQf3M1";
+        initialPassword = "NixOS_rulez!";
         extraGroups = [ "wheel" "networkmanager" "input" ];
       };
 
