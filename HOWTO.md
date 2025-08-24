@@ -62,6 +62,42 @@ Notes and gotchas
 CI
 - .github/workflows builds minimal ISO and publishes artifacts on GitHub.
 
+Host prerequisites (binary caches)
+To ensure fast builds, configure your host’s Nix settings to trust the binary caches used by this flake.
+
+NixOS (recommended)
+Add to /etc/nixos/configuration.nix and apply with sudo nixos-rebuild switch:
+
+nix.settings = {
+  experimental-features = [ "nix-command" "flakes" ];
+  accept-flake-config = true;
+  substituters = [
+    "https://cache.nixos.org"
+    "https://nix-community.cachix.org"
+    "https://nyx.chaotic.cx/"
+  ];
+  trusted-public-keys = [
+    "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
+    "nyx.chaotic.cx-1:HfnXSw4pj95iI/n17rIDy40agHj12WfF+Gqk6SonIT8="
+  ];
+};
+
+Non-NixOS (multi-user daemon)
+Edit /etc/nix/nix.conf and restart nix-daemon:
+
+accept-flake-config = true
+substituters = https://cache.nixos.org https://nix-community.cachix.org https://nyx.chaotic.cx/
+trusted-public-keys = nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs= nyx.chaotic.cx-1:HfnXSw4pj95iI/n17rIDy40agHj12WfF+Gqk6SonIT8=
+
+Non-NixOS (single-user)
+Edit ~/.config/nix/nix.conf with the same settings as above.
+
+One-shot build flags
+Add to your build command:
+--accept-flake-config \
+--option substituters "https://cache.nixos.org https://nix-community.cachix.org https://nyx.chaotic.cx/" \
+--option trusted-public-keys "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs= nyx.chaotic.cx-1:HfnXSw4pj95iI/n17rIDy40agHj12WfF+Gqk6SonIT8="
+
 Build commands
 - Minimal: env NIXPKGS_ALLOW_BROKEN=1 nix build .#nixosConfigurations.nixos-minimal.config.system.build.isoImage --impure
 - GNOME:   env NIXPKGS_ALLOW_BROKEN=1 nix build .#nixosConfigurations.nixos-gnome.config.system.build.isoImage --impure

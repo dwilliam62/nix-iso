@@ -10,6 +10,26 @@ Three profiles are available and all include a full recovery toolset by default:
 
 See different instructions below.
 
+Interactive installers (single-disk, UEFI)
+- This repo provides interactive installer scripts for multiple filesystems under scripts/:
+  - install-btrfs.sh (default in this repo)
+  - install-ext4.sh
+  - install-xfs.sh
+  - install-bcachefs.sh (with zstd compression)
+  - install-zfs.sh (zstd compression, safe defaults, generates hostId)
+- Run them from a live environment after cloning this repo:
+
+```
+sudo scripts/install-btrfs.sh      # or install-ext4.sh, install-xfs.sh, install-bcachefs.sh, install-zfs.sh
+```
+
+Notes
+- All installers partition GPT: 1GiB ESP (FAT32) + remainder as the selected filesystem.
+- Btrfs uses subvolumes (@, @home, @nix, @snapshots) and zstd compression.
+- bcachefs is formatted with --compression=zstd.
+- ZFS pool is created with zstd compression and sensible defaults; datasets use legacy mountpoints and a hostId is generated for initrd import.
+- ext4 and XFS do not have transparent compression; fstrim is enabled in configuration.
+
 ## Getting Started
 
 This guide assumes that you have `nix` setup in your system or/and are using NixOS.
@@ -46,6 +66,44 @@ env NIXPKGS_ALLOW_BROKEN=1 nix build .#nixosConfigurations.nixos-minimal.config.
 Ensure that flakes and nix-command are enabled on the host system before building the ISO.
 
 The resulting ISO image can be found in the `./result/iso/` directory.
+
+Host prerequisites (binary caches)
+To avoid building large dependencies (like the kernel and ZFS) from source, configure your host to trust the binary caches used by this flake.
+
+NixOS (recommended)
+Add this to your /etc/nixos/configuration.nix and rebuild (sudo nixos-rebuild switch):
+
+nix.settings = {
+  experimental-features = [ "nix-command" "flakes" ];
+  accept-flake-config = true;
+  substituters = [
+    "https://cache.nixos.org"
+    "https://nix-community.cachix.org"
+    "https://nyx.chaotic.cx/"
+  ];
+  trusted-public-keys = [
+    "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
+    "nyx.chaotic.cx-1:HfnXSw4pj95iI/n17rIDy40agHj12WfF+Gqk6SonIT8="
+  ];
+};
+
+Non-NixOS (multi-user daemon)
+Edit /etc/nix/nix.conf and restart nix-daemon:
+
+accept-flake-config = true
+substituters = https://cache.nixos.org https://nix-community.cachix.org https://nyx.chaotic.cx/
+trusted-public-keys = nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs= nyx.chaotic.cx-1:HfnXSw4pj95iI/n17rIDy40agHj12WfF+Gqk6SonIT8=
+
+Non-NixOS (single-user)
+Edit ~/.config/nix/nix.conf with the same settings as above.
+
+One-shot build (no file edits)
+Pass options to nix build:
+
+nix build .#nixosConfigurations.nixos-cosmic.config.system.build.isoImage \
+  --impure --accept-flake-config \
+  --option substituters "https://cache.nixos.org https://nix-community.cachix.org https://nyx.chaotic.cx/" \
+  --option trusted-public-keys "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs= nyx.chaotic.cx-1:HfnXSw4pj95iI/n17rIDy40agHj12WfF+Gqk6SonIT8="
 
 Output filename convention:
 - nixos-ddubsos-<profile>-<version>-<arch>.iso
