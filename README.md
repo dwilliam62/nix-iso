@@ -31,14 +31,40 @@ Destructive operations warning
 
 How to build the ISOs
 - Prereqs: enable flakes and accept flake config (see below for cache settings).
-- Clone and build:
+- Clone:
   - git clone https://github.com/dwilliam62/nix-iso.git
   - cd nix-iso
-  - Minimal: env NIXPKGS_ALLOW_BROKEN=1 nix build .#nixosConfigurations.nixos-minimal.config.system.build.isoImage --impure
-  - GNOME:   env NIXPKGS_ALLOW_BROKEN=1 nix build .#nixosConfigurations.nixos-gnome.config.system.build.isoImage --impure
-  - COSMIC:  env NIXPKGS_ALLOW_BROKEN=1 nix build .#nixosConfigurations.nixos-cosmic.config.system.build.isoImage --impure
-  - Recovery: env NIXPKGS_ALLOW_BROKEN=1 nix build .#nixosConfigurations.nixos-recovery.config.system.build.isoImage --impure
+
+Preferred (helper script)
+- Use the helper to avoid long attribute paths. It also defaults NIXPKGS_ALLOW_BROKEN=1 to match historical behavior.
+  ```
+  # Minimal ISO
+  ./scripts/build-iso.sh minimal
+
+  # GNOME ISO
+  ./scripts/build-iso.sh gnome
+
+  # COSMIC ISO (experimental)
+  ./scripts/build-iso.sh cosmic
+
+  # Recovery ISO
+  ./scripts/build-iso.sh nixos-recovery
+  ```
+- The script accepts friendly aliases and common typos (see scripts/build-iso.sh header for details).
 - Result: the ISO image will be in ./result/iso/
+
+Advanced/manual build
+- If you prefer raw nix build commands:
+  ```
+  # Minimal
+  env NIXPKGS_ALLOW_BROKEN=1 nix build .#nixosConfigurations.nixos-minimal.config.system.build.isoImage --impure
+  # GNOME
+  env NIXPKGS_ALLOW_BROKEN=1 nix build .#nixosConfigurations.nixos-gnome.config.system.build.isoImage --impure
+  # COSMIC
+  env NIXPKGS_ALLOW_BROKEN=1 nix build .#nixosConfigurations.nixos-cosmic.config.system.build.isoImage --impure
+  # Recovery
+  env NIXPKGS_ALLOW_BROKEN=1 nix build .#nixosConfigurations.nixos-recovery.config.system.build.isoImage --impure
+  ```
 
 Binary caches (strongly recommended)
 - To avoid building the kernel and ZFS from source, configure caches on the build host:
