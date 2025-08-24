@@ -5,23 +5,40 @@
 #
 # Usage:
 #   ./scripts/build-iso.sh [PROFILE]
-# Where PROFILE is one of: nixos-minimal, nixos-gnome, nixos-cosmic
+# PROFILE may be one of (or a friendly alias):
+#   - nixos-minimal | minimal | min | mimimal (typo)
+#   - nixos-gnome   | gnome
+#   - nixos-cosmic  | cosmic
 # Default PROFILE: nixos-minimal
 #
 # All profiles include the recovery toolset by default.
 
 set -euo pipefail
 
-PROFILE=${1:-nixos-minimal}
-case "$PROFILE" in
-  nixos-minimal|nixos-gnome|nixos-cosmic) ;;
-  *) echo "Unknown PROFILE: $PROFILE" >&2; exit 2;;
+RAW_INPUT=${1:-nixos-minimal}
+INPUT=$(echo "$RAW_INPUT" | tr '[:upper:]' '[:lower:]')
+
+case "$INPUT" in
+  nixos-minimal|minimal|min|mimimal|minimal-iso)
+    PROFILE="nixos-minimal";
+    ;;
+  nixos-gnome|gnome|gnoem|gome)
+    PROFILE="nixos-gnome";
+    ;;
+  nixos-cosmic|cosmic|comsic|csmic)
+    PROFILE="nixos-cosmic";
+    ;;
+  *)
+    echo "Unknown PROFILE: $RAW_INPUT" >&2
+    echo "Valid options: nixos-minimal | nixos-gnome | nixos-cosmic (aliases: minimal|min, gnome, cosmic)" >&2
+    exit 2
+    ;;
  esac
 
 # Allow broken packages by default to match historical behavior
 export NIXPKGS_ALLOW_BROKEN="${NIXPKGS_ALLOW_BROKEN:-1}"
 
-echo "==> Building profile: $PROFILE"
+echo "==> Building profile: $PROFILE (from input: $RAW_INPUT)"
 echo "==> NIXPKGS_ALLOW_BROKEN=$NIXPKGS_ALLOW_BROKEN"
 echo "==> Fork repo: https://github.com/dwilliam62/nix-iso"
 echo "==> Upstream credits: https://github.com/JohnRTitor/nix-iso"
