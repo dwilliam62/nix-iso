@@ -1,6 +1,6 @@
 # This module defines a NixOS installation CD that contains Cosmic.
 
-{ lib, pkgs, ... }:
+{ config, lib, pkgs, ... }:
 
 {
   imports = [

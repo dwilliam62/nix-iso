@@ -48,7 +48,7 @@
     ntfs3g exfatprogs dosfstools
     cryptsetup lvm2 mdadm
     smartmontools hdparm nvme-cli
-    gddrescue testdisk
+    ddrescue testdisk
     zstd xz bzip2 gzip zip unzip pv
 
     # Btrfs snapshot/backup tooling (CLI)
