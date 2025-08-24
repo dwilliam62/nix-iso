@@ -14,7 +14,7 @@ Installer Improvements
 - [ ] Add optional swapfile creation on Btrfs (with correct NOCOW/compression settings)
 - [ ] Allow choosing disk encryption (LUKS on Btrfs) flow
 - [ ] Optional separate /var or additional subvolumes presets
-- [ ] Option to set hashed passwords non-interactively (prompt -> openssl -6)
+- [x] Option to set hashed passwords non-interactively (prompt -> openssl -6) — Implemented in all installer scripts when openssl is available
 
 Security & Access
 - [ ] Live ISO: switch SSH to key-only mode toggle (env var or flag)
@@ -23,17 +23,17 @@ Security & Access
 Docs & UX
 - [ ] scripts/README: add examples for rescue tasks (chroot, boot repair, ddrescue)
 - [ ] README.md: document scripts/build-iso.sh usage and profiles
-- [ ] Tools-Included.md: keep in sync when toolset changes
+- [ ] Tools-Included.md: keep in sync when toolset changes (ongoing)
 
 CI/CD
 - [ ] Add CI job to build nixos-recovery ISO artifact on pushes to the branch
-- [ ] Add flake checks for recovery profile (nix flake check)
+- [x] Add flake checks in CI (nix flake check) — Implemented via .github/workflows/check-flake.yml
 
 Filesystem Coverage
 - [ ] Ensure complete tooling and live support for major filesystems:
-  - [ ] EXT4: e2fsprogs (fsck.ext4, resize2fs, tune2fs, etc.)
-  - [ ] XFS: xfsprogs (xfs_repair, xfs_growfs, etc.)
-  - [ ] Bcachefs: bcachefs-tools
-  - [ ] ZFS: userland tools (zfs, zpool) and kernel module availability on the live ISO (align with boot.zfs.package)
+  - [x] EXT4: e2fsprogs (fsck.ext4, resize2fs, tune2fs, etc.) — included in live ISO and installer
+  - [x] XFS: xfsprogs (xfs_repair, xfs_growfs, etc.) — included in live ISO and installer
+  - [x] Bcachefs: bcachefs-tools — included in live ISO and installer
+  - [x] ZFS: userland tools (zfs, zpool) and kernel module availability on the live ISO (align with boot.zfs.package) — userland sourced from config.boot.zfs.package; kernel/package aligned in common.nix; installer exists
 - [ ] Verify mounting/repair workflows from the live ISO and document in HOWTO/Tools-Included
-- [ ] Consider adding cifs-utils for SMB/CIFS mounts (in addition to nfs-utils)
+- [x] Consider adding cifs-utils for SMB/CIFS mounts (in addition to nfs-utils) — included (also added nfs-utils)

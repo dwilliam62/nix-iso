@@ -22,6 +22,8 @@ Storage / Filesystems
 - btrfs-progs, e2fsprogs, xfsprogs
 - bcachefs-tools
 - ntfs3g, exfatprogs, dosfstools (mkfs.fat)
+- nfs-utils, cifs-utils (NFS/SMB mounts)
+- ZFS userland via boot.zfs.package (zpool, zfs)
 - cryptsetup, lvm2, mdadm
 
 Recovery / Imaging / Archiving

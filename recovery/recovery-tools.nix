@@ -71,18 +71,20 @@ in
     btrfs-progs e2fsprogs xfsprogs
     bcachefs-tools
     ntfs3g exfatprogs dosfstools
+    nfs-utils cifs-utils
     cryptsetup lvm2 mdadm
     smartmontools hdparm nvme-cli
     ddrescue testdisk
     zstd xz bzip2 gzip zip unzip pv
 
+    # ZFS userland (zpool, zfs) — align with kernel/module package
+    # Use the configured boot.zfs.package to ensure compatibility
+    
+  ] ++ [ config.boot.zfs.package ]
     # Btrfs snapshot/backup tooling (CLI)
-    snapper btrbk
-
+    ++ [ snapper btrbk ]
     # Hardware utils and monitors
-    pciutils usbutils lshw lsof strace gdb
-    htop btop atop
-  ];
+    ++ [ pciutils usbutils lshw lsof strace gdb htop btop atop ];
 
   # Expose docs on the live ISO for quick reference
   environment.etc."ddubsos-docs".source = "${ddubsosDocs}/share/ddubsos-docs";
