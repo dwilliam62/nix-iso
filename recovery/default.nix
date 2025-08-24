@@ -13,4 +13,5 @@
 
   # Customize ISO filename to distinguish from standard NixOS ISOs
   image.fileName = "nixos-ddubsos-recovery-${config.system.nixos.label}-${pkgs.stdenv.hostPlatform.system}.iso";
+  isoImage.isoName = lib.mkForce "nixos-ddubsos-recovery-${config.system.nixos.label}-${pkgs.stdenv.hostPlatform.system}.iso";
 }
