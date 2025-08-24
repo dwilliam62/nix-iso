@@ -71,8 +71,10 @@ Using the installer scripts (on the live ISO or any NixOS live env)
   - install-bcachefs.sh — bcachefs with --compression=zstd
   - install-zfs.sh — ZFS with sensible defaults; legacy mountpoints; generates networking.hostId
 - Run as root; the scripts will self-elevate via sudo when possible:
+  ```
   sudo ./scripts/install-btrfs.sh
   # or install-ext4.sh, install-xfs.sh, install-bcachefs.sh, install-zfs.sh
+  ```
 
 Notes on defaults
 - Partitioning: GPT with 1 GiB EFI System Partition (FAT32) + remainder for the chosen filesystem.
