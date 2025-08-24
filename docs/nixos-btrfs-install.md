@@ -100,7 +100,7 @@ nixpkgs.config.allowUnfree = true; nix.settings.experimental-features = [
 
 security.sudo = { enable = true; wheelNeedsPassword = true; };
 
-system.stateVersion = "25.05"; } NIXCONF "'
+system.stateVersion = "25.11";
 
 8. Install (interactive root password prompt) nixos-install Follow the prompt to
    set the root password.
