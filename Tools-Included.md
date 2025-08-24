@@ -25,7 +25,7 @@ Storage / Filesystems
 - cryptsetup, lvm2, mdadm
 
 Recovery / Imaging / Archiving
-- gddrescue, testdisk
+- ddrescue, testdisk
 - zstd, xz, bzip2, gzip, zip, unzip, pv
 
 Hardware / Debug / Inspection
@@ -36,7 +36,6 @@ Hardware / Debug / Inspection
 Btrfs Snapshot & Backup Tooling
 - snapper
 - btrbk
-- grub-btrfs
 - btrfsmaintenance
 
 Notes
