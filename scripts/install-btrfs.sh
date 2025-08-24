@@ -9,6 +9,16 @@
 
 set -euo pipefail
 
+# Require root; if not root, try to re-exec via sudo preserving env
+if [ "${EUID:-$(id -u)}" -ne 0 ]; then
+  if command -v sudo >/dev/null 2>&1; then
+    exec sudo -E bash "$0" "$@"
+  else
+    echo "This installer must be run as root. Try: sudo $0" >&2
+    exit 1
+  fi
+fi
+
 require() { command -v "$1" >/dev/null 2>&1 || { echo "Missing dependency: $1" >&2; exit 1; }; }
 for dep in lsblk parted mkfs.fat mkfs.btrfs btrfs mount umount sed awk tee nixos-generate-config nixos-install; do
   require "$dep"
@@ -39,7 +49,8 @@ USERNAME=$(read_default "Username" "$USERNAME")
 # Disk selection
 echo
 echo "Available disks:"
-lsblk -d -o NAME,SIZE,MODEL,TYPE | awk 'NR==1 || $4=="disk" {print}'
+# Show only real disks; format as /dev/<name>  <size>  <model>
+lsblk -dn -o NAME,SIZE,TYPE,MODEL | awk '$3=="disk" {printf "/dev/%s  %s  %s\n", $1, $2, $4}'
 echo
 read -r -p "Enter target disk (e.g., /dev/sda or /dev/nvme0n1): " DISK
 [ -b "$DISK" ] || { echo "Not a block device: $DISK" >&2; exit 1; }

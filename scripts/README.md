@@ -21,9 +21,13 @@ What it does
 - Runs nixos-install (you will be prompted to set the root password)
 
 How to run
+- Run as root. The script will self-elevate via sudo if available, otherwise exit with instructions.
 ```
-sudo install-btrfs.sh
+./install-btrfs.sh
 ```
+
+Docs on the live ISO
+- Find docs under /etc/ddubsos-docs (README.md, HOWTO.md, Tools-Included.md, and docs/*).
 
 Notes
 - The script will destroy data on the selected disk. Read prompts carefully.

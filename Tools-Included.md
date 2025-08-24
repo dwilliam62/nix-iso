@@ -40,4 +40,6 @@ Btrfs Snapshot & Backup Tooling
 Notes
 - The live ISOs package scripts/ into $PATH (e.g. install-btrfs.sh).
 - The live ISO enables sshd with password auth for convenience (change after install).
+- sudo is available on the live ISO; the default user has passwordless sudo.
+- Docs are available under /etc/ddubsos-docs.
 - The recovery toolset is included by default in all profiles; the dedicated recovery profile is maintained for compatibility but reuses the same module.

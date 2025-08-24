@@ -27,12 +27,35 @@
         chmod -R +x "$out/bin" || true
       '';
     };
+
+    ddubsosDocs = pkgs.stdenv.mkDerivation {
+      pname = "ddubsos-docs";
+      version = "1.0";
+      src = ../.;
+      dontBuild = true;
+      installPhase = ''
+        set -euo pipefail
+        dst="$out/share/ddubsos-docs"
+        mkdir -p "$dst"
+        for f in README.md HOWTO.md Tools-Included.md; do
+          if [ -f "$src/$f" ]; then cp "$src/$f" "$dst/"; fi
+        done
+        if [ -d "$src/docs" ]; then
+          cp -r "$src/docs" "$dst/docs"
+        fi
+        if [ -f "$src/scripts/README.md" ]; then
+          mkdir -p "$dst/scripts"
+          cp "$src/scripts/README.md" "$dst/scripts/"
+        fi
+      '';
+    };
   in [
     recoveryScripts
+    ddubsosDocs
 
     # Core CLI
     coreutils gnused gawk gnugrep findutils ripgrep ugrep which file
-    util-linux busybox
+    util-linux busybox sudo
 
     # Editors
     neovim vim nano
@@ -54,9 +77,13 @@
     # Btrfs snapshot/backup tooling (CLI)
     snapper btrbk
 
-    # Hardware utils
+    # Hardware utils and monitors
     pciutils usbutils lshw lsof strace gdb
+    htop btop atop
   ];
+
+  # Expose docs on the live ISO for quick reference
+  environment.etc."ddubsos-docs".source = "${ddubsosDocs}/share/ddubsos-docs";
 
   # Provide a starter configuration at /etc/nixos/configuration.nix
   # so users can quickly edit and run nixos-install.
@@ -106,6 +133,7 @@
       environment.systemPackages = with pkgs; [
         neovim vim gnused gawk ripgrep gnugrep findutils coreutils
         curl wget pciutils btrfs-progs
+        htop btop atop
       ];
 
       security.sudo = {
