@@ -18,4 +18,7 @@
   ];
 
   networking.hostName = "nixos-minimal"; # set live session hostname
+
+  # Customize ISO filename to distinguish from standard NixOS ISOs
+  isoImage.isoName = "nixos-ddubsos-minimal-${config.system.nixos.label}-${pkgs.stdenv.hostPlatform.system}.iso";
 }

@@ -10,4 +10,7 @@
   ];
 
   networking.hostName = "nixos-recovery"; # live session hostname
+
+  # Customize ISO filename to distinguish from standard NixOS ISOs
+  isoImage.isoName = "nixos-ddubsos-recovery-${config.system.nixos.label}-${pkgs.stdenv.hostPlatform.system}.iso";
 }

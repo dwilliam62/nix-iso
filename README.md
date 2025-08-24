@@ -47,6 +47,12 @@ Ensure that flakes and nix-command are enabled on the host system before buildin
 
 The resulting ISO image can be found in the `./result/iso/` directory.
 
+Output filename convention:
+- nixos-ddubsos-<profile>-<version>-<arch>.iso
+  - profile: minimal | gnome | cosmic | recovery
+  - version: from config.system.nixos.label (e.g., 25.05.yyyyMMdd)
+  - arch: e.g., x86_64-linux
+
 ## License
 
 The configuration files in this repository are licensed under the Apache 2.0 License. However, softwares used in conjunction with these configuration files are owned by their respective owners. Please ensure to comply with the licensing terms of all used software.

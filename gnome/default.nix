@@ -28,4 +28,7 @@
     gparted
     google-chrome
   ];
+
+  # Customize ISO filename to distinguish from standard NixOS ISOs
+  isoImage.isoName = "nixos-ddubsos-gnome-${config.system.nixos.label}-${pkgs.stdenv.hostPlatform.system}.iso";
 }
