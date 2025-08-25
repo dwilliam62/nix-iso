@@ -113,6 +113,17 @@ Included tools overview
 - See Tools-Included.md for the complete, up-to-date list of tools packaged into the live ISO.
 - Documentation is available on the live ISO under /etc/ddubsos-docs (README.md, HOWTO.md, Tools-Included.md, docs/*).
 
+Documentation
+- Filesystem overview: docs/filesystems-overview.md
+- Defaults and parameters: docs/filesystem-defaults.md
+- Quickstarts:
+  - ZFS (single disk): docs/quickstart-zfs.md
+  - ZFS (mirrored): docs/quickstart-zfs-mirror.md
+  - Btrfs (single disk): docs/quickstart-btrfs.md
+  - Btrfs (mirrored): docs/quickstart-btrfs-mirror.md
+  - bcachefs (experimental): docs/quickstart-bcachefs.md
+- Btrfs non-interactive playbook: docs/nixos-btrfs-install.md
+
 License and contributions
 - Licensed under Apache-2.0 (see LICENSE). Third-party software remains under their respective licenses.
 - Contributions are welcome via issues and PRs.
