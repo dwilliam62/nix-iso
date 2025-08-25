@@ -322,7 +322,10 @@ ${HASH_LINE:+${HASH_LINE}}
   services.openssh.enable = true;
 
   nixpkgs.config.allowUnfree = true;
-  nix.settings.experimental-features = [ "nix-command" "flakes" ];
+  nix.settings = {
+    experimental-features = [ "nix-command" "flakes" ];
+    accept-flake-config = true;
+  };
 
   security.sudo = {
     enable = true;
