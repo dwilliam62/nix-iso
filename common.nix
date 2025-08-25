@@ -24,6 +24,15 @@
     (final: prev: {
       bcachefs-tools = inputs.bcachefs-tools.packages.${pkgs.system}.bcachefs-tools;
     })
+    # Work around upstream breakage: pygls tests fail with lsprotocol API mismatch on python3.13
+    (final: prev: {
+      python3Packages = prev.python3Packages.overrideScope (pyFinal: pyPrev: {
+        pygls = pyPrev.pygls.overrideAttrs (old: {
+          doCheck = false;               # skip pytest phase
+          pytestCheckPhase = ''true'';   # no-op safeguard
+        });
+      });
+    })
   ];
 
   boot.kernelPackages = pkgs.linuxPackages_cachyos;
