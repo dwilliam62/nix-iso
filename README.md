@@ -179,6 +179,8 @@ Documentation
   [docs/filesystems-overview.md](docs/filesystems-overview.md)
 - Defaults and parameters:
   [docs/filesystem-defaults.md](docs/filesystem-defaults.md)
+- Package dependencies:
+  [docs/package-dependencies.md](docs/package-dependencies.md)
 - Quickstarts:
   - ZFS (single disk): [docs/quickstart-zfs.md](docs/quickstart-zfs.md)
   - ZFS (mirrored):
