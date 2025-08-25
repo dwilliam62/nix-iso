@@ -46,6 +46,7 @@ All notable changes to this project will be documented in this file.
     - Harden bcachefs mounted check to avoid false positives; print detected mounts.
     - Ensure PATH includes common sbin locations; add missing runtime requires.
     - Fix parted error: remove unsupported fs-type token from mkpart (bcachefs); name the partition; format with mkfs.bcachefs.
+    - Force FS type on mounts (-t bcachefs) and use subvol=@ syntax to avoid misleading "not btrfs subvolumes" messages.
 
 Future considerations
 - Snapshots/retention management: enable services.sanoid or services.zfs.autoSnapshot with sensible policies; mark noisy datasets as non-snapshotted.
