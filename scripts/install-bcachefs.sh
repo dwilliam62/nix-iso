@@ -25,6 +25,23 @@ for dep in lsblk parted mkfs.fat mkfs.bcachefs bcachefs mount umount sed awk tee
   require "$dep"
 done
 
+# Guardrail: verify kernel support for bcachefs (either built-in or loadable module)
+check_bcachefs_kernel() {
+  if grep -qw bcachefs /proc/filesystems; then
+    return 0
+  fi
+  if command -v modprobe >/dev/null 2>&1; then
+    if modprobe -q bcachefs 2>/dev/null; then
+      if grep -qw bcachefs /proc/filesystems; then
+        return 0
+      fi
+    fi
+  fi
+  echo "ERROR: Kernel bcachefs support not detected (not listed in /proc/filesystems and modprobe failed)." >&2
+  echo "This environment likely cannot boot a bcachefs root. Use a kernel with bcachefs enabled or switch filesystems." >&2
+  exit 1
+}
+
 # Defaults
 TIMEZONE=${TIMEZONE:-America/New_York}
 KEYMAP=${KEYMAP:-us}
@@ -38,6 +55,14 @@ echo
 echo "WARNING: bcachefs is experimental and provided AS-IS."
 echo "- It may change or be removed from kernels in the future."
 echo "- Do NOT use bcachefs for production environments or to store important data."
+echo "- Prefer testing in a VM or on disposable hardware. Consider pinning nixpkgs to a known-good revision for kernel/tools compatibility."
+
+# Require explicit acknowledgement for experimental filesystem
+read -r -p "Type 'EXPERIMENT' to acknowledge the risks and continue: " EXP_ACK
+[ "$EXP_ACK" = "EXPERIMENT" ] || { echo "Aborted"; exit 1; }
+
+# Guardrail: ensure kernel actually supports bcachefs before proceeding
+check_bcachefs_kernel
 
 # Prompt helpers
 read_default() {

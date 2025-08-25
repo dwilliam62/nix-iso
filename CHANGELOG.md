@@ -11,6 +11,7 @@ All notable changes to this project will be documented in this file.
     - Create subvolumes: @ (root), @home, @nix, @var, @var_log, @var_cache, @var_tmp, @var_lib.
     - Mount with compress=zstd,noatime; apply nodev,noexec on log/cache/tmp.
     - Add boot.initrd.supportedFilesystems = [ "bcachefs" ]; to generated configuration.
+    - Add guardrails: explicit EXPERIMENT acknowledgement and kernel support check (modprobe + /proc/filesystems).
   - scripts/install-zfs.sh
     - Create a container dataset rpool/root (mountpoint=none) and an actual root rpool/root/nixos (mounted at /).
     - Split /var into dedicated datasets with tuned properties:
