@@ -182,7 +182,8 @@ wipefs -af "$DISK"
 parted -s "$DISK" mklabel gpt
 parted -s "$DISK" mkpart ESP fat32 1MiB 1025MiB
 parted -s "$DISK" set 1 esp on
-parted -s "$DISK" mkpart primary bcachefs 1025MiB 100%
+parted -s "$DISK" mkpart primary 1025MiB 100%
+parted -s "$DISK" name 2 nixos
 
 # Derive partition names
 P1="$DISK"1

@@ -45,6 +45,7 @@ All notable changes to this project will be documented in this file.
   - scripts/install-bcachefs.sh
     - Harden bcachefs mounted check to avoid false positives; print detected mounts.
     - Ensure PATH includes common sbin locations; add missing runtime requires.
+    - Fix parted error: remove unsupported fs-type token from mkpart (bcachefs); name the partition; format with mkfs.bcachefs.
 
 Future considerations
 - Snapshots/retention management: enable services.sanoid or services.zfs.autoSnapshot with sensible policies; mark noisy datasets as non-snapshotted.
