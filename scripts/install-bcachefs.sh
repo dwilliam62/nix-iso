@@ -214,14 +214,14 @@ umount /mnt
 # Mount target
 printf '\nMounting target ...\n'
 FSUUID=$(blkid -s UUID -o value "$P2")
-mount -t bcachefs -o compress=zstd,noatime,subvol=@ "/dev/disk/by-uuid/$FSUUID" /mnt
+mount -t bcachefs -o compress=zstd,noatime,subvolume=/@ "/dev/disk/by-uuid/$FSUUID" /mnt
 mkdir -p /mnt/{home,nix,boot,var,var/log,var/cache,var/tmp,var/lib}
-mount -t bcachefs -o compress=zstd,noatime,subvol=@home "/dev/disk/by-uuid/$FSUUID" /mnt/home
-mount -t bcachefs -o compress=zstd,noatime,subvol=@nix "/dev/disk/by-uuid/$FSUUID" /mnt/nix
-mount -t bcachefs -o compress=zstd,noatime,subvol=@var_log,nodev,noexec "/dev/disk/by-uuid/$FSUUID" /mnt/var/log
-mount -t bcachefs -o compress=zstd,noatime,subvol=@var_cache,nodev,noexec "/dev/disk/by-uuid/$FSUUID" /mnt/var/cache
-mount -t bcachefs -o compress=zstd,noatime,subvol=@var_tmp,nodev,noexec "/dev/disk/by-uuid/$FSUUID" /mnt/var/tmp
-mount -t bcachefs -o compress=zstd,noatime,subvol=@var_lib "/dev/disk/by-uuid/$FSUUID" /mnt/var/lib
+mount -t bcachefs -o compress=zstd,noatime,subvolume=/@home "/dev/disk/by-uuid/$FSUUID" /mnt/home
+mount -t bcachefs -o compress=zstd,noatime,subvolume=/@nix "/dev/disk/by-uuid/$FSUUID" /mnt/nix
+mount -t bcachefs -o compress=zstd,noatime,subvolume=/@var_log,nodev,noexec "/dev/disk/by-uuid/$FSUUID" /mnt/var/log
+mount -t bcachefs -o compress=zstd,noatime,subvolume=/@var_cache,nodev/noexec "/dev/disk/by-uuid/$FSUUID" /mnt/var/cache
+mount -t bcachefs -o compress=zstd,noatime,subvolume=/@var_tmp,nodev,noexec "/dev/disk/by-uuid/$FSUUID" /mnt/var/tmp
+mount -t bcachefs -o compress=zstd,noatime,subvolume=/@var_lib "/dev/disk/by-uuid/$FSUUID" /mnt/var/lib
 mount "$P1" /mnt/boot
 
 # Generate hardware config
