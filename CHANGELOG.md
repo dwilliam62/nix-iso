@@ -22,6 +22,12 @@ All notable changes to this project will be documented in this file.
     - Partitions both disks (ESP + ZFS), creates mirrored pool, mounts both ESPs at /boot and /boot2.
     - Configures systemd-boot mirroredBoots for the second ESP; includes ZFS initrd support and hostId.
     - Uses the same practical dataset layout as install-zfs.sh.
+  - scripts/install-btrfs-boot-mirror.sh
+    - New installer that provisions a Btrfs mirrored (RAID1) root capable of booting.
+    - Interactively selects two unmounted disks with destructive confirmation.
+    - Partitions both disks (ESP + Btrfs), creates a Btrfs filesystem with -m raid1 -d raid1.
+    - Creates subvolumes (@, @home, @nix, @snapshots) and mounts with compress=zstd,discard=async,noatime.
+    - Mounts both ESPs at /boot and /boot2 and configures systemd-boot.mirroredBoots for replication.
 
 Future considerations
 - Snapshots/retention management: enable services.sanoid or services.zfs.autoSnapshot with sensible policies; mark noisy datasets as non-snapshotted.
