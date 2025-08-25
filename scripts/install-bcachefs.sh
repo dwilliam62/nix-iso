@@ -33,6 +33,12 @@ USERNAME=${USERNAME:-dwilliams}
 
 echo "=== NixOS bcachefs Installer ==="
 
+# Prominent warning about bcachefs stability
+echo
+echo "WARNING: bcachefs is experimental and provided AS-IS."
+echo "- It may change or be removed from kernels in the future."
+echo "- Do NOT use bcachefs for production environments or to store important data."
+
 # Prompt helpers
 read_default() {
   local prompt="$1" default="$2" var

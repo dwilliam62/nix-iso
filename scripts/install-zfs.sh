@@ -37,6 +37,13 @@ HOSTID=$(head -c4 /dev/urandom | od -A none -t x4 | awk '{print $1}')
 
 echo "=== NixOS ZFS Installer ==="
 
+# Prominent warning about ZFS and broken kernel markers on NixOS
+echo
+echo "WARNING: ZFS on NixOS may be marked as BROKEN at times when the kernel and ZFS ABI drift."
+echo "- Ensure you use a matching kernel+ZFS pair (e.g., linuxPackages_cachyos + zfs_cachyos), or pin nixpkgs to a known-good revision."
+echo "- Avoid globally enabling nixpkgs.config.allowBroken unless you understand the risks (unbuilt/unsupported code, potential failures)."
+echo "You have been warned."
+
 # Prompt helpers
 read_default() {
   local prompt="$1" default="$2" var
