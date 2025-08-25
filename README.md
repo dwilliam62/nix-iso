@@ -114,15 +114,15 @@ Included tools overview
 - Documentation is available on the live ISO under /etc/ddubsos-docs (README.md, HOWTO.md, Tools-Included.md, docs/*).
 
 Documentation
-- Filesystem overview: docs/filesystems-overview.md
-- Defaults and parameters: docs/filesystem-defaults.md
+- Filesystem overview: [docs/filesystems-overview.md](docs/filesystems-overview.md)
+- Defaults and parameters: [docs/filesystem-defaults.md](docs/filesystem-defaults.md)
 - Quickstarts:
-  - ZFS (single disk): docs/quickstart-zfs.md
-  - ZFS (mirrored): docs/quickstart-zfs-mirror.md
-  - Btrfs (single disk): docs/quickstart-btrfs.md
-  - Btrfs (mirrored): docs/quickstart-btrfs-mirror.md
-  - bcachefs (experimental): docs/quickstart-bcachefs.md
-- Btrfs non-interactive playbook: docs/nixos-btrfs-install.md
+  - ZFS (single disk): [docs/quickstart-zfs.md](docs/quickstart-zfs.md)
+  - ZFS (mirrored): [docs/quickstart-zfs-mirror.md](docs/quickstart-zfs-mirror.md)
+  - Btrfs (single disk): [docs/quickstart-btrfs.md](docs/quickstart-btrfs.md)
+  - Btrfs (mirrored): [docs/quickstart-btrfs-mirror.md](docs/quickstart-btrfs-mirror.md)
+  - bcachefs (experimental): [docs/quickstart-bcachefs.md](docs/quickstart-bcachefs.md)
+- Btrfs non-interactive playbook: [docs/nixos-btrfs-install.md](docs/nixos-btrfs-install.md)
 
 License and contributions
 - Licensed under Apache-2.0 (see LICENSE). Third-party software remains under their respective licenses.
