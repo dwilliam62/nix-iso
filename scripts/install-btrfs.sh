@@ -140,10 +140,13 @@ read -r -p "Type 'INSTALL' to proceed: " confirm
 [ "$confirm" = "INSTALL" ] || { echo "Aborted"; exit 1; }
 
 # Ensure not mounted
-mount | grep -E "^$DISK" && { echo "Device appears mounted. Unmount first." >&2; exit 1; } || true
+if mount | grep -Eq "^$DISK"; then
+  echo "Device appears mounted. Unmount first." >&2
+  exit 1
+fi
 
 # Partition
-echo "\nPartitioning $DISK ..."
+printf '\nPartitioning %s ...\n' "$DISK"
 wipefs -af "$DISK"
 parted -s "$DISK" mklabel gpt
 parted -s "$DISK" mkpart ESP fat32 1MiB 1025MiB
@@ -159,12 +162,12 @@ if [[ "$DISK" == *nvme* ]] || [[ "$DISK" == *mmcblk* ]]; then
 fi
 
 # Filesystems
-echo "\nCreating filesystems ..."
+printf '\nCreating filesystems ...\n'
 mkfs.fat -F32 -n EFI "$P1"
 mkfs.btrfs -f -L nixos "$P2"
 
 # Subvolumes
-echo "\nCreating subvolumes ..."
+printf '\nCreating subvolumes ...\n'
 mkdir -p /mnt
 mount -o subvolid=5 "$P2" /mnt
 btrfs subvolume create /mnt/@
@@ -174,7 +177,7 @@ btrfs subvolume create /mnt/@snapshots
 umount /mnt
 
 # Mount target (include /.snapshots to aid tools like snapper)
-echo "\nMounting target ..."
+printf '\nMounting target ...\n'
 mount -o compress=zstd,discard=async,noatime,subvol=@ "$P2" /mnt
 mkdir -p /mnt/{home,nix,boot,.snapshots}
 mount -o compress=zstd,discard=async,noatime,subvol=@home "$P2" /mnt/home
@@ -244,9 +247,9 @@ ${HASH_LINE:+${HASH_LINE}}
 }
 NIXCONF
 
-echo "\nConfiguration written to $CFG"
+printf '\nConfiguration written to %s\n' "$CFG"
 
-echo "\nStarting installation (you will be prompted to set the root password) ..."
+printf '\nStarting installation (you will be prompted to set the root password) ...\n'
 nixos-install
 
-echo "\nInstallation complete. You can reboot into the installed system."
+printf '\nInstallation complete. You can reboot into the installed system.\n'

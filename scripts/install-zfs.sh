@@ -176,10 +176,13 @@ read -r -p "Type 'INSTALL' to proceed: " confirm
 [ "$confirm" = "INSTALL" ] || { echo "Aborted"; exit 1; }
 
 # Ensure not mounted
-mount | grep -E "^$DISK" && { echo "Device appears mounted. Unmount first." >&2; exit 1; } || true
+if mount | grep -Eq "^$DISK"; then
+  echo "Device appears mounted. Unmount first." >&2
+  exit 1
+fi
 
 # Partition
-echo "\nPartitioning $DISK ..."
+printf '\nPartitioning %s ...\n' "$DISK"
 wipefs -af "$DISK"
 parted -s "$DISK" mklabel gpt
 parted -s "$DISK" mkpart ESP fat32 1MiB 1025MiB
@@ -194,7 +197,7 @@ if [[ "$DISK" == *nvme* ]] || [[ "$DISK" == *mmcblk* ]]; then
 fi
 
 # Filesystems (EFI) and ZFS pool
-echo "\nCreating filesystems and ZFS pool ..."
+printf '\nCreating filesystems and ZFS pool ...\n'
 mkfs.fat -F32 -n EFI "$P1"
 
 # Create zpool with safe defaults + compression
@@ -226,7 +229,7 @@ zfs create -o mountpoint=legacy -o exec=off -o devices=off -o com.sun:auto-snaps
 zfs create -o mountpoint=legacy "$POOL/var/lib"
 
 # Mount target
-echo "\nMounting target ..."
+printf '\nMounting target ...\n'
 mkdir -p /mnt
 mount -t zfs "$POOL/root/nixos" /mnt
 mkdir -p /mnt/{home,nix,boot,var,var/log,var/cache,var/tmp,var/lib}
@@ -308,10 +311,10 @@ ${HASH_LINE:+${HASH_LINE}}
 }
 NIXCONF
 
-echo "\nConfiguration written to $CFG"
+printf '\nConfiguration written to %s\n' "$CFG"
 
-echo "\nStarting installation (you will be prompted to set the root password) ..."
+printf '\nStarting installation (you will be prompted to set the root password) ...\n'
 nixos-install
 
-echo "\nInstallation complete. You can reboot into the installed system."
+printf '\nInstallation complete. You can reboot into the installed system.\n'
 

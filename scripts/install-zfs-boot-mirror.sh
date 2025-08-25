@@ -257,15 +257,15 @@ partition_disk() {
   parted -s "$d" mkpart primary 1025MiB 100%
 }
 
-echo "\nPartitioning $DISK1 and $DISK2 ..."
+printf '\nPartitioning %s and %s ...\n' "$DISK1" "$DISK2"
 partition_disk "$DISK1"
 partition_disk "$DISK2"
 
-read P1A P2A < <(part_names "$DISK1")
-read P1B P2B < <(part_names "$DISK2")
+read -r P1A P2A < <(part_names "$DISK1")
+read -r P1B P2B < <(part_names "$DISK2")
 
 # Filesystems (EFI) and ZFS pool
-echo "\nCreating filesystems and ZFS pool ..."
+printf '\nCreating filesystems and ZFS pool ...\n'
 mkfs.fat -F32 -n EFI_A "$P1A"
 mkfs.fat -F32 -n EFI_B "$P1B"
 
@@ -298,7 +298,7 @@ zfs create -o mountpoint=legacy -o exec=off -o devices=off -o com.sun:auto-snaps
 zfs create -o mountpoint=legacy "$POOL/var/lib"
 
 # Mount target
-echo "\nMounting target ..."
+printf '\nMounting target ...\n'
 mkdir -p /mnt
 mount -t zfs "$POOL/root/nixos" /mnt
 mkdir -p /mnt/{home,nix,boot,boot2,var,var/log,var/cache,var/tmp,var/lib}
@@ -315,7 +315,7 @@ mount "$P1B" /mnt/boot2
 nixos-generate-config --root /mnt
 
 # Gather UUIDs for ESPs (for mirroredBoots devices)
-UUID_A=$(blkid -s UUID -o value "$P1A")
+# UUID_A intentionally unused; /boot2 mirroredBoots uses UUID_B only
 UUID_B=$(blkid -s UUID -o value "$P1B")
 
 # Write configuration.nix
@@ -393,10 +393,10 @@ ${HASH_LINE:+${HASH_LINE}}
 }
 NIXCONF
 
-echo "\nConfiguration written to $CFG"
+printf '\nConfiguration written to %s\n' "$CFG"
 
-echo "\nStarting installation (you will be prompted to set the root password) ..."
+printf '\nStarting installation (you will be prompted to set the root password) ...\n'
 nixos-install
 
-echo "\nInstallation complete. You can reboot into the installed system."
+printf '\nInstallation complete. You can reboot into the installed system.\n'
 
