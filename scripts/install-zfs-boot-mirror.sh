@@ -26,6 +26,19 @@ for dep in lsblk parted mkfs.fat zpool zfs mount umount sed awk tee nixos-genera
   require "$dep"
 done
 
+# Guardrail: verify ZFS kernel module availability
+check_zfs_kernel() {
+  if lsmod 2>/dev/null | awk '{print $1}' | grep -qx zfs; then
+    return 0
+  fi
+  if command -v modprobe >/dev/null 2>&1 && modprobe -q zfs 2>/dev/null; then
+    return 0
+  fi
+  echo "ERROR: ZFS kernel module not available (lsmod/modprobe failed)." >&2
+  echo "Install a kernel with ZFS support or load the module before proceeding." >&2
+  exit 1
+}
+
 # Defaults
 TIMEZONE=${TIMEZONE:-America/New_York}
 KEYMAP=${KEYMAP:-us}
@@ -37,6 +50,25 @@ POOL=${POOL:-rpool}
 HOSTID=$(head -c4 /dev/urandom | od -A none -t x4 | awk '{print $1}')
 
 echo "=== NixOS ZFS Mirrored Boot Installer ==="
+
+# Environment diagnostics and guardrails
+check_zfs_kernel
+if command -v systemd-detect-virt >/dev/null 2>&1 && systemd-detect-virt --container --quiet; then
+  echo "WARNING: Running inside a container. Block device access, module loading, or efivars may not work." >&2
+fi
+if [ ! -d /sys/firmware/efi/efivars ]; then
+  echo "NOTE: UEFI efivars not available; NVRAM enrollment may be skipped by systemd-boot." >&2
+fi
+# Refuse if any ZFS filesystems are mounted or pools imported
+if findmnt -nt zfs >/dev/null 2>&1; then
+  echo "ERROR: One or more ZFS filesystems are currently mounted." >&2
+  echo "Please unmount them before running this installer." >&2
+  exit 1
+fi
+if command -v zpool >/dev/null 2>&1 && zpool list -H >/dev/null 2>&1 && [ "$(zpool list -H | wc -l)" -gt 0 ]; then
+  echo "ERROR: One or more ZFS pools are currently imported. Export them before proceeding (zpool export <pool>)." >&2
+  exit 1
+fi
 
 echo
 echo "WARNING: ZFS on NixOS may be marked as BROKEN at times when the kernel and ZFS ABI drift."

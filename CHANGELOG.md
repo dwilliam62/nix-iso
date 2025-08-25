@@ -13,6 +13,7 @@ All notable changes to this project will be documented in this file.
     - Add boot.initrd.supportedFilesystems = [ "bcachefs" ]; to generated configuration.
     - Add guardrails: explicit EXPERIMENT acknowledgement and kernel support check (modprobe + /proc/filesystems).
   - scripts/install-zfs.sh
+    - Add guardrails: environment warnings; refuse if any ZFS filesystems are mounted or pools imported; verify ZFS module available.
     - Create a container dataset rpool/root (mountpoint=none) and an actual root rpool/root/nixos (mounted at /).
     - Split /var into dedicated datasets with tuned properties:
       - rpool/var (mountpoint=none)
@@ -23,12 +24,14 @@ All notable changes to this project will be documented in this file.
     - Keep separate datasets: rpool/home and rpool/nix (atime=off) for compression and snapshot control.
     - Update mount sequence accordingly; remove the previous rpool/snapshots dataset and /.snapshots mount.
   - scripts/install-zfs-boot-mirror.sh
+    - Add guardrails: environment warnings; refuse if any ZFS filesystems are mounted or pools imported; verify ZFS module available.
     - New installer that provisions a ZFS mirror capable of booting.
     - Interactively selects two unmounted disks, validates sizes, shows destructive prompt.
     - Partitions both disks (ESP + ZFS), creates mirrored pool, mounts both ESPs at /boot and /boot2.
     - Configures systemd-boot mirroredBoots for the second ESP; includes ZFS initrd support and hostId.
     - Uses the same practical dataset layout as install-zfs.sh.
   - scripts/install-btrfs-boot-mirror.sh
+    - Add guardrails: environment warnings; refuse if any btrfs filesystems are mounted.
     - New installer that provisions a Btrfs mirrored (RAID1) root capable of booting.
     - Interactively selects two unmounted disks with destructive confirmation.
     - Partitions both disks (ESP + Btrfs), creates a Btrfs filesystem with -m raid1 -d raid1.

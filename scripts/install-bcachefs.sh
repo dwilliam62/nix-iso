@@ -64,6 +64,21 @@ read -r -p "Type 'EXPERIMENT' to acknowledge the risks and continue: " EXP_ACK
 # Guardrail: ensure kernel actually supports bcachefs before proceeding
 check_bcachefs_kernel
 
+# Refuse to run if any bcachefs filesystem is currently mounted in the live session
+if findmnt -nt bcachefs >/dev/null 2>&1; then
+  echo "ERROR: One or more bcachefs filesystems are currently mounted." >&2
+  echo "Please unmount them before running this installer (findmnt -t bcachefs; umount -R <mountpoint>)." >&2
+  exit 1
+fi
+
+# Environment diagnostics/warnings
+if command -v systemd-detect-virt >/dev/null 2>&1 && systemd-detect-virt --container --quiet; then
+  echo "WARNING: Running inside a container. Block device access, module loading, or efivars may not work." >&2
+fi
+if [ ! -d /sys/firmware/efi/efivars ]; then
+  echo "NOTE: UEFI efivars not available; NVRAM enrollment may be skipped by systemd-boot." >&2
+fi
+
 # Prompt helpers
 read_default() {
   local prompt="$1" default="$2" var

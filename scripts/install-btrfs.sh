@@ -24,6 +24,19 @@ for dep in lsblk parted mkfs.fat mkfs.btrfs btrfs mount umount sed awk tee nixos
   require "$dep"
 done
 
+# Environment diagnostics and guardrails
+if command -v systemd-detect-virt >/dev/null 2>&1 && systemd-detect-virt --container --quiet; then
+  echo "WARNING: Running inside a container. Block device access or efivars may not work." >&2
+fi
+if [ ! -d /sys/firmware/efi/efivars ]; then
+  echo "NOTE: UEFI efivars not available; NVRAM enrollment may be skipped by systemd-boot." >&2
+fi
+if findmnt -nt btrfs >/dev/null 2>&1; then
+  echo "ERROR: One or more btrfs filesystems are currently mounted." >&2
+  echo "Please unmount them before running this installer." >&2
+  exit 1
+fi
+
 # Defaults
 TIMEZONE=${TIMEZONE:-America/New_York}
 KEYMAP=${KEYMAP:-us}
