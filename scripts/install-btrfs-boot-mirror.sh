@@ -223,15 +223,15 @@ partition_disk() {
   parted -s "$d" mkpart primary btrfs 1025MiB 100%
 }
 
-echo "\nPartitioning $DISK1 and $DISK2 ..."
+printf '\nPartitioning %s and %s ...\n' "$DISK1" "$DISK2"
 partition_disk "$DISK1"
 partition_disk "$DISK2"
 
-read P1A P2A < <(part_names "$DISK1")
-read P1B P2B < <(part_names "$DISK2")
+read -r P1A P2A < <(part_names "$DISK1")
+read -r P1B P2B < <(part_names "$DISK2")
 
 # Filesystems
-echo "\nCreating filesystems ..."
+printf '\nCreating filesystems ...\n'
 mkfs.fat -F32 -n EFI_A "$P1A"
 mkfs.fat -F32 -n EFI_B "$P1B"
 
@@ -242,7 +242,7 @@ mkfs.btrfs -f -L nixos -m raid1 -d raid1 "$P2A" "$P2B"
 FSUUID=$(blkid -s UUID -o value "$P2A")
 
 # Subvolumes
-echo "\nCreating subvolumes ..."
+printf '\nCreating subvolumes ...\n'
 mkdir -p /mnt
 mount -o subvolid=5 "/dev/disk/by-uuid/$FSUUID" /mnt
 btrfs subvolume create /mnt/@
@@ -252,7 +252,7 @@ btrfs subvolume create /mnt/@snapshots
 umount /mnt
 
 # Mount target (include /.snapshots)
-echo "\nMounting target ..."
+printf '\nMounting target ...\n'
 mount -o compress=zstd,discard=async,noatime,subvol=@ "/dev/disk/by-uuid/$FSUUID" /mnt
 mkdir -p /mnt/{home,nix,boot,boot2,.snapshots}
 mount -o compress=zstd,discard=async,noatime,subvol=@home "/dev/disk/by-uuid/$FSUUID" /mnt/home
@@ -333,10 +333,10 @@ ${HASH_LINE:+${HASH_LINE}}
 }
 NIXCONF
 
-echo "\nConfiguration written to $CFG"
+printf '\nConfiguration written to %s\n' "$CFG"
 
-echo "\nStarting installation (you will be prompted to set the root password) ..."
+printf '\nStarting installation (you will be prompted to set the root password) ...\n'
 nixos-install
 
-echo "\nInstallation complete. You can reboot into the installed system."
+printf '\nInstallation complete. You can reboot into the installed system.\n'
 
