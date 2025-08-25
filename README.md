@@ -11,8 +11,11 @@ What this project provides
 - Multiple ISO profiles, all including the recovery toolset by default:
   - Minimal (nixos-minimal)
   - GNOME (nixos-gnome)
-  - COSMIC (nixos-cosmic, experimental)
-  - Recovery (nixos-recovery)
+- COSMIC (nixos-cosmic, experimental)
+- Recovery (nixos-recovery)
+
+Note about live ISO GUIs: The GNOME and COSMIC profiles change only the live ISO user interface. The installers do NOT install GNOME or COSMIC onto the target system; they install a base NixOS. You can add a desktop environment after the initial install.
+
 - Modern kernel and ZFS package selection via chaotic nyx for broader hardware/filesystem support.
 - Full filesystem tooling for installs and rescue:
   - Btrfs: btrfs-progs (subvolumes @, @home, @nix, @snapshots)
@@ -68,6 +71,22 @@ Advanced/manual build
 
 Binary caches (strongly recommended)
 - To avoid building the kernel and ZFS from source, configure caches on the build host:
+
+What gets installed by the scripts
+- Base system only: a minimal NixOS with a generated /etc/nixos/configuration.nix. No desktop environment is installed by these scripts.
+- Bootloader: systemd-boot on UEFI. Mirrored installers also configure systemd-boot.mirroredBoots to replicate the bootloader to /boot2.
+- Filesystems and layout: installers create opinionated layouts per filesystem for reliable operation and clean snapshots:
+  - ZFS: rpool/root (container) + rpool/root/nixos → /; datasets for /home, /nix (atime=off), and split /var (log/cache/tmp/lib). Legacy mountpoints are used for ZFS datasets. ZFS hostId is generated for initrd import.
+  - Btrfs: subvolumes @ → /, @home → /home, @nix → /nix, @snapshots → /.snapshots. Mirrored variant uses RAID1 (-m raid1 -d raid1).
+  - bcachefs (experimental): subvolumes @ → /, @home → /home, @nix → /nix, and split /var into @var_log, @var_cache, @var_tmp, @var_lib.
+- Services and defaults:
+  - NetworkManager enabled; OpenSSH enabled; sudo for wheel with password.
+  - zswap enabled via kernelModules + kernelParams (z3fold + zstd).
+  - fstrim service enabled (ext4/XFS/bcachefs); ZFS autotrim is set at pool creation.
+- Nix settings:
+  - nixpkgs.config.allowUnfree = true
+  - nix.settings.experimental-features = [ "nix-command" "flakes" ] (flakes enabled by default)
+- Safety: installers require an INSTALL confirmation before destructive actions and include environment guardrails (container/UEFI notices, conflicting mount checks).
 
 NixOS (recommended)
   nix.settings = {
