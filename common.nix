@@ -31,6 +31,10 @@
           doCheck = false;               # skip pytest phase
           pytestCheckPhase = ''true'';   # no-op safeguard
         });
+        i3ipc = pyPrev.i3ipc.overrideAttrs (old: {
+          doCheck = false;               # async tests failing under pytest/python 3.13
+          pytestCheckPhase = ''true'';   # no-op safeguard
+        });
       });
     })
   ];

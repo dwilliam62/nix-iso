@@ -66,14 +66,21 @@ if [ ! -d /sys/firmware/efi/efivars ]; then
   echo "NOTE: UEFI efivars not available; NVRAM enrollment may be skipped by systemd-boot." >&2
 fi
 # Refuse if any ZFS filesystems are mounted or pools imported (avoid accidental interference)
-if findmnt -nt zfs >/dev/null 2>&1; then
-  echo "ERROR: One or more ZFS filesystems are currently mounted." >&2
+# Use /proc/self/mounts for an exact fstype match and show what we found.
+if awk '$3=="zfs"{found=1; exit} END{exit !found}' /proc/self/mounts; then
+  echo "ERROR: One or more ZFS filesystems are currently mounted:" >&2
+  awk '$3=="zfs"{printf "  - %s on %s\n", $1, $2}' /proc/self/mounts >&2 || true
   echo "Please unmount them before running this installer." >&2
   exit 1
 fi
-if command -v zpool >/dev/null 2>&1 && zpool list -H >/dev/null 2>&1 && [ "$(zpool list -H | wc -l)" -gt 0 ]; then
-  echo "ERROR: One or more ZFS pools are currently imported. Export them before proceeding (zpool export <pool>)." >&2
-  exit 1
+# Consider pools imported only if zpool list actually produces rows.
+if command -v zpool >/dev/null 2>&1; then
+  if zpool list -H 2>/dev/null | grep -q .; then
+    echo "ERROR: One or more ZFS pools are currently imported:" >&2
+    zpool list -H 2>/dev/null >&2 || true
+    echo "Export them before proceeding (zpool export <pool>)." >&2
+    exit 1
+  fi
 fi
 
 # Prominent warning about ZFS and broken kernel markers on NixOS
