@@ -6,6 +6,11 @@ All notable changes to this project will be documented in this file.
 
 ## [2025-08-25] ddubsos-iso
 - ZFS installers: adopt a practical dataset layout similar to btrfs @-style subvolumes using ZFS datasets.
+- bcachefs installer: adopt structured subvolume layout and initrd support.
+  - scripts/install-bcachefs.sh
+    - Create subvolumes: @ (root), @home, @nix, @var, @var_log, @var_cache, @var_tmp, @var_lib.
+    - Mount with compress=zstd,noatime; apply nodev,noexec on log/cache/tmp.
+    - Add boot.initrd.supportedFilesystems = [ "bcachefs" ]; to generated configuration.
   - scripts/install-zfs.sh
     - Create a container dataset rpool/root (mountpoint=none) and an actual root rpool/root/nixos (mounted at /).
     - Split /var into dedicated datasets with tuned properties:

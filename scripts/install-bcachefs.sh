@@ -21,7 +21,7 @@ if [ "${EUID:-$(id -u)}" -ne 0 ]; then
 fi
 
 require() { command -v "$1" >/dev/null 2>&1 || { echo "Missing dependency: $1" >&2; exit 1; }; }
-for dep in lsblk parted mkfs.fat mkfs.bcachefs mount umount sed awk tee nixos-generate-config nixos-install; do
+for dep in lsblk parted mkfs.fat mkfs.bcachefs bcachefs mount umount sed awk tee nixos-generate-config nixos-install; do
   require "$dep"
 done
 
@@ -145,11 +145,31 @@ echo "\nCreating filesystems ..."
 mkfs.fat -F32 -n EFI "$P1"
 mkfs.bcachefs -f --compression=zstd -L nixos "$P2"
 
+# Subvolumes
+echo "\nCreating subvolumes ..."
+mkdir -p /mnt
+mount "$P2" /mnt
+bcachefs subvolume create /mnt/@
+bcachefs subvolume create /mnt/@home
+bcachefs subvolume create /mnt/@nix
+bcachefs subvolume create /mnt/@var
+bcachefs subvolume create /mnt/@var_log
+bcachefs subvolume create /mnt/@var_cache
+bcachefs subvolume create /mnt/@var_tmp
+bcachefs subvolume create /mnt/@var_lib
+umount /mnt
+
 # Mount target
 echo "\nMounting target ..."
-mkdir -p /mnt
-mount -o noatime "$P2" /mnt
-mkdir -p /mnt/{home,nix,boot,.snapshots}
+FSUUID=$(blkid -s UUID -o value "$P2")
+mount -o compress=zstd,noatime,subvol=/@ "/dev/disk/by-uuid/$FSUUID" /mnt
+mkdir -p /mnt/{home,nix,boot,var,var/log,var/cache,var/tmp,var/lib}
+mount -o compress=zstd,noatime,subvol=/@home "/dev/disk/by-uuid/$FSUUID" /mnt/home
+mount -o compress=zstd,noatime,subvol=/@nix "/dev/disk/by-uuid/$FSUUID" /mnt/nix
+mount -o compress=zstd,noatime,subvol=/@var_log,nodev,noexec "/dev/disk/by-uuid/$FSUUID" /mnt/var/log
+mount -o compress=zstd,noatime,subvol=/@var_cache,nodev,noexec "/dev/disk/by-uuid/$FSUUID" /mnt/var/cache
+mount -o compress=zstd,noatime,subvol=/@var_tmp,nodev,noexec "/dev/disk/by-uuid/$FSUUID" /mnt/var/tmp
+mount -o compress=zstd,noatime,subvol=/@var_lib "/dev/disk/by-uuid/$FSUUID" /mnt/var/lib
 mount "$P1" /mnt/boot
 
 # Generate hardware config
@@ -164,6 +184,7 @@ cat > "$CFG" <<NIXCONF
 
   boot = {
     supportedFilesystems = [ "bcachefs" ];
+    initrd.supportedFilesystems = [ "bcachefs" ];
     loader = {
       systemd-boot.enable = true;
       efi.canTouchEfiVariables = true;
