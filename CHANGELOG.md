@@ -4,6 +4,32 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2025-08-25] ddubsos-iso
+- ZFS installers: adopt a practical dataset layout similar to btrfs @-style subvolumes using ZFS datasets.
+  - scripts/install-zfs.sh
+    - Create a container dataset rpool/root (mountpoint=none) and an actual root rpool/root/nixos (mounted at /).
+    - Split /var into dedicated datasets with tuned properties:
+      - rpool/var (mountpoint=none)
+      - rpool/var/log (exec=off, devices=off)
+      - rpool/var/cache (exec=off, devices=off, com.sun:auto-snapshot=false)
+      - rpool/var/tmp (exec=off, devices=off, com.sun:auto-snapshot=false)
+      - rpool/var/lib
+    - Keep separate datasets: rpool/home and rpool/nix (atime=off) for compression and snapshot control.
+    - Update mount sequence accordingly; remove the previous rpool/snapshots dataset and /.snapshots mount.
+  - scripts/install-zfs-boot-mirror.sh
+    - New installer that provisions a ZFS mirror capable of booting.
+    - Interactively selects two unmounted disks, validates sizes, shows destructive prompt.
+    - Partitions both disks (ESP + ZFS), creates mirrored pool, mounts both ESPs at /boot and /boot2.
+    - Configures systemd-boot mirroredBoots for the second ESP; includes ZFS initrd support and hostId.
+    - Uses the same practical dataset layout as install-zfs.sh.
+
+Future considerations
+- Snapshots/retention management: enable services.sanoid or services.zfs.autoSnapshot with sensible policies; mark noisy datasets as non-snapshotted.
+- Native ZFS encryption for selected datasets (or full root), including initrd key management.
+- Workload tuning datasets and properties for databases (recordsize=16K), VMs/large files (recordsize=1M, logbias=throughput), and Docker under /var/lib/docker.
+- Boot environments (e.g., zedenv) to pair ZFS datasets with NixOS generations for rollback workflows.
+- Swap strategy: prefer a swap partition; if using zvol-backed swap, apply safe properties and exclude from snapshots.
+
 ## [2025-08-24] ddubsos-iso
 - Add ai-summary.json: machine-readable summary for AI processing.
 - Add HUMAN_SUMMARY.md: concise human-friendly overview and extension guidance.
