@@ -1,26 +1,29 @@
-NixOS Btrfs Install Playbook (Remote/Live USB, Non-Interactive)
+# NixOS Btrfs Install Playbook (Non-Interactive)
 
-This playbook reproduces the successful installation flow we used, designed for
-remote installs from a live USB, with robust, non-interactive commands and tool
-bootstrapping.
+This playbook mirrors what the interactive Btrfs installers do, using robust, non-interactive commands.
+It also highlights mirrored boot setup when two disks are available.
 
-Principles • Use non-interactive commands to avoid losing SSH sessions (no
-interactive nix-shell or editors). • Bootstrap needed tools ad hoc with
-nix-shell --run wrappers. • Prefer complete file writes (heredocs) over brittle
-inline edits. • Use absolute paths, disable pagers/aliases, and avoid history
-expansion pitfalls.
+Principles
+- Use non-interactive commands to avoid losing SSH sessions.
+- Bootstrap tools with nix-shell --run wrappers.
+- Prefer complete file writes (heredocs) over inline edits.
+- Use absolute paths and disable pagers/aliases.
 
-Tool Bundle (on-demand) Bring common CLI tools as needed without leaving your
-session: nix-shell -p\
-coreutils gnused gawk gnugrep findutils util-linux\
-parted dosfstools btrfs-progs e2fsprogs\
-iproute2 iputils openssh openssl rsync\
-neovim git curl wget pciutils usbutils nfs-utils jq ripgrep tmux\
---run 'bash -lc "echo tools ready"'
+Tool Bundle (on-demand)
+Bring common CLI tools as needed without leaving your session:
 
-Notes: • coreutils gives real cat, tee, nl. Use command cat to bypass aliases
-like bat. • nfs-utils provides the NFS client. neovim is optional; prefer
-scripted edits.
+```bash
+nix-shell -p \
+  coreutils gnused gawk gnugrep findutils util-linux \
+  parted dosfstools btrfs-progs e2fsprogs \
+  iproute2 iputils openssh openssl rsync \
+  neovim git curl wget pciutils usbutils nfs-utils jq ripgrep tmux \
+  --run 'bash -lc "echo tools ready"'
+```
+
+Notes
+- coreutils gives real cat, tee, nl; use command cat to bypass aliases like bat.
+- nfs-utils provides the NFS client. neovim is optional; prefer scripted edits.
 
 Steps
 
@@ -39,19 +42,23 @@ parted -s "$TARGET" set 1 esp on parted -s "$TARGET" mkpart primary btrfs
 2. Filesystems nix-shell -p dosfstools btrfs-progs --run 'bash -lc " set -euxo
    pipefail mkfs.fat -F32 -n EFI /dev/sda1 mkfs.btrfs -f -L nixos /dev/sda2 "'
 
-3. Create Btrfs Subvolumes (@, @home, @nix) nix-shell -p btrfs-progs coreutils
-   --run 'bash -lc " set -euxo pipefail mkdir -p /mnt mount -o subvolid=5
-   /dev/sda2 /mnt btrfs subvolume create /mnt/@ btrfs subvolume create
-   /mnt/@home btrfs subvolume create /mnt/@nix btrfs subvolume list /mnt umount
-   /mnt "'
+3. Create Btrfs Subvolumes (@, @home, @nix, optionally @snapshots)
+   nix-shell -p btrfs-progs coreutils --run 'bash -lc " set -euxo pipefail \
+   mkdir -p /mnt; mount -o subvolid=5 /dev/sda2 /mnt; \
+   btrfs subvolume create /mnt/@; \
+   btrfs subvolume create /mnt/@home; \
+   btrfs subvolume create /mnt/@nix; \
+   btrfs subvolume create /mnt/@snapshots; \
+   umount /mnt "'
 
-4. Mount Subvolumes (compress=zstd, discard=async, noatime) nix-shell -p
-   btrfs-progs coreutils dosfstools --run 'bash -lc " set -euxo pipefail mount
-   -o compress=zstd,discard=async,noatime,subvol=@ /dev/sda2 /mnt mkdir -p
-   /mnt/{home,nix,boot} mount -o
-   compress=zstd,discard=async,noatime,subvol=@home /dev/sda2 /mnt/home mount -o
-   compress=zstd,discard=async,noatime,subvol=@nix /dev/sda2 /mnt/nix mount
-   /dev/sda1 /mnt/boot mount | grep -E "^/dev/(sd|nvme)" "'
+4. Mount Subvolumes (compress=zstd, discard=async, noatime)
+   nix-shell -p btrfs-progs coreutils dosfstools --run 'bash -lc " set -euxo pipefail \
+   mount -o compress=zstd,discard=async,noatime,subvol=@ /dev/sda2 /mnt; \
+   mkdir -p /mnt/{home,nix,boot}; \
+   mount -o compress=zstd,discard=async,noatime,subvol=@home /dev/sda2 /mnt/home; \
+   mount -o compress=zstd,discard=async,noatime,subvol=@nix /dev/sda2 /mnt/nix; \
+   mount /dev/sda1 /mnt/boot; \
+   mount | grep -E "^/dev/(sd|nvme)" "'
 
 5. Generate Base Config nix-shell -p nixos-install-tools --run 'bash -lc "
    nixos-generate-config --root /mnt "'
@@ -102,14 +109,17 @@ security.sudo = { enable = true; wheelNeedsPassword = true; };
 
 system.stateVersion = "25.11";
 
-8. Install (interactive root password prompt) nixos-install Follow the prompt to
-   set the root password.
+8. Install (interactive root password prompt)
+   nixos-install
+   Follow the prompt to set the root password.
 
-9. Reboot and Verify mount | grep -E '^/dev/(sd|nvme)|:/volume1/DiskStation54TB'
-   systemctl status remote-fs.target cat /sys/module/zswap/parameters/enabled
-   cat /sys/module/zswap/parameters/compressor cat
-   /sys/module/zswap/parameters/max_pool_percent cat
-   /sys/module/zswap/parameters/zpool
+9. Reboot and Verify
+   mount | grep -E '^/dev/(sd|nvme)'
+   systemctl status remote-fs.target
+   cat /sys/module/zswap/parameters/enabled
+   cat /sys/module/zswap/parameters/compressor
+   cat /sys/module/zswap/parameters/max_pool_percent
+   cat /sys/module/zswap/parameters/zpool
 
 Pitfalls and Remedies • Missing tools: always wrap with nix-shell -p ... --run
 'bash -lc "..."' to avoid interactive shells. • Aliases (cat->bat): use command
