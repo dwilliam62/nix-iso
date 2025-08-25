@@ -20,8 +20,15 @@ if [ "${EUID:-$(id -u)}" -ne 0 ]; then
   fi
 fi
 
+# Ensure common sbin locations are in PATH
+if ! printf %s "$PATH" | grep -q "/usr/sbin"; then PATH="/usr/sbin:$PATH"; fi
+if ! printf %s "$PATH" | grep -q "/sbin"; then PATH="/sbin:$PATH"; fi
+if [ -d /usr/local/sbin ] && ! printf %s "$PATH" | grep -q "/usr/local/sbin"; then PATH="/usr/local/sbin:$PATH"; fi
+if [ -d /run/current-system/sw/bin ] && ! printf %s "$PATH" | grep -q "/run/current-system/sw/bin"; then PATH="/run/current-system/sw/bin:$PATH"; fi
+export PATH
+
 require() { command -v "$1" >/dev/null 2>&1 || { echo "Missing dependency: $1" >&2; exit 1; }; }
-for dep in lsblk parted mkfs.fat mkfs.bcachefs bcachefs mount umount sed awk tee nixos-generate-config nixos-install; do
+for dep in lsblk parted mkfs.fat mkfs.bcachefs bcachefs mount umount sed awk tee nixos-generate-config nixos-install wipefs blkid; do
   require "$dep"
 done
 
@@ -65,8 +72,9 @@ read -r -p "Type 'EXPERIMENT' to acknowledge the risks and continue: " EXP_ACK
 check_bcachefs_kernel
 
 # Refuse to run if any bcachefs filesystem is currently mounted in the live session
-if findmnt -nt bcachefs >/dev/null 2>&1; then
-  echo "ERROR: One or more bcachefs filesystems are currently mounted." >&2
+if awk '$3=="bcachefs"{found=1; exit} END{exit !found}' /proc/self/mounts; then
+  echo "ERROR: One or more bcachefs filesystems are currently mounted:" >&2
+  awk '$3=="bcachefs"{printf "  - %s on %s\n", $1, $2}' /proc/self/mounts >&2 || true
   echo "Please unmount them before running this installer (findmnt -t bcachefs; umount -R <mountpoint>)." >&2
   exit 1
 fi

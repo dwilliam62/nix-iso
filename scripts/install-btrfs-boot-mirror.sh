@@ -22,6 +22,13 @@ if [ "${EUID:-$(id -u)}" -ne 0 ]; then
   fi
 fi
 
+# Ensure common sbin locations are in PATH
+if ! printf %s "$PATH" | grep -q "/usr/sbin"; then PATH="/usr/sbin:$PATH"; fi
+if ! printf %s "$PATH" | grep -q "/sbin"; then PATH="/sbin:$PATH"; fi
+if [ -d /usr/local/sbin ] && ! printf %s "$PATH" | grep -q "/usr/local/sbin"; then PATH="/usr/local/sbin:$PATH"; fi
+if [ -d /run/current-system/sw/bin ] && ! printf %s "$PATH" | grep -q "/run/current-system/sw/bin"; then PATH="/run/current-system/sw/bin:$PATH"; fi
+export PATH
+
 require() { command -v "$1" >/dev/null 2>&1 || { echo "Missing dependency: $1" >&2; exit 1; }; }
 for dep in lsblk parted mkfs.fat mkfs.btrfs btrfs mount umount sed awk tee nixos-generate-config nixos-install blkid blockdev wipefs; do
   require "$dep"
@@ -34,8 +41,10 @@ fi
 if [ ! -d /sys/firmware/efi/efivars ]; then
   echo "NOTE: UEFI efivars not available; NVRAM enrollment may be skipped by systemd-boot." >&2
 fi
-if findmnt -nt btrfs >/dev/null 2>&1; then
-  echo "ERROR: One or more btrfs filesystems are currently mounted." >&2
+# Refuse if any btrfs filesystems are mounted; show what was detected
+if awk '$3=="btrfs"{found=1; exit} END{exit !found}' /proc/self/mounts; then
+  echo "ERROR: One or more btrfs filesystems are currently mounted:" >&2
+  awk '$3=="btrfs"{printf "  - %s on %s\n", $1, $2}' /proc/self/mounts >&2 || true
   echo "Please unmount them before running this installer." >&2
   exit 1
 fi
