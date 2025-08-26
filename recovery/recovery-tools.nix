@@ -1,5 +1,10 @@
 # Recovery tooling and live ISO conveniences shared by all profiles
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 let
   ddubsosDocs = pkgs.stdenv.mkDerivation {
     pname = "ddubsos-docs";
@@ -32,59 +37,119 @@ in
   services.openssh = {
     enable = true;
     settings = {
-      PermitRootLogin = "yes";      # convenience for recovery; change after install
+      PermitRootLogin = "yes"; # convenience for recovery; change after install
       PasswordAuthentication = true; # allow passwords on live media
     };
   };
 
   # Package the repository scripts into PATH on the live ISO
-  environment.systemPackages = with pkgs; let
-    recoveryScripts = pkgs.stdenv.mkDerivation {
-      pname = "recovery-scripts";
-      version = "1.0";
-      src = ../scripts;
-      dontBuild = true;
-      installPhase = ''
-        mkdir -p "$out/bin"
-        cp -r "$src"/* "$out/bin/" || true
-        chmod -R +x "$out/bin" || true
-      '';
-    };
+  environment.systemPackages =
+    with pkgs;
+    let
+      recoveryScripts = pkgs.stdenv.mkDerivation {
+        pname = "recovery-scripts";
+        version = "1.0";
+        src = ../scripts;
+        dontBuild = true;
+        installPhase = ''
+          mkdir -p "$out/bin"
+          cp -r "$src"/* "$out/bin/" || true
+          chmod -R +x "$out/bin" || true
+        '';
+      };
 
-  in [
-    recoveryScripts
-    ddubsosDocs
+    in
+    [
+      recoveryScripts
+      ddubsosDocs
 
-    # Core CLI
-    coreutils gnused gawk gnugrep findutils ripgrep ugrep which file
-    util-linux busybox sudo
+      # Core CLI
+      coreutils
+      gnused
+      gawk
+      gnugrep
+      findutils
+      ripgrep
+      ugrep
+      which
+      file
+      util-linux
+      busybox
+      sudo
 
-    # Editors
-    neovim vim nano
+      # Editors
+      neovim
+      vim
+      nano
 
-    # Networking/transfer
-    curl wget rsync openssh iproute2 iputils mtr traceroute nmap socat netcat-openbsd
-    jq yq-go openssl
+      # Networking/transfer
+      curl
+      wget
+      rsync
+      openssh
+      iproute2
+      iputils
+      mtr
+      traceroute
+      nmap
+      socat
+      netcat-openbsd
+      jq
+      yq-go
+      openssl
 
-    # Storage/filesystems & recovery
-    parted gptfdisk efibootmgr
-    btrfs-progs e2fsprogs xfsprogs
-    bcachefs-tools
-    ntfs3g exfatprogs dosfstools
-    nfs-utils cifs-utils
-    cryptsetup lvm2 mdadm
-    smartmontools hdparm nvme-cli
-    ddrescue testdisk
-    zstd xz bzip2 gzip zip unzip pv
+      # Storage/filesystems & recovery
+      parted
+      gptfdisk
+      efibootmgr
+      btrfs-progs
+      e2fsprogs
+      xfsprogs
+      bcachefs-tools
+      ntfs3g
+      exfatprogs
+      dosfstools
+      nfs-utils
+      cifs-utils
+      cryptsetup
+      lvm2
+      mdadm
+      smartmontools
+      hdparm
+      nvme-cli
+      ddrescue
+      testdisk
+      timeshift
+      zstd
+      xz
+      bzip2
+      gzip
+      zip
+      unzip
+      pv
 
-    # ZFS userland (zpool, zfs) — align with kernel/module package
-    # Use the configured boot.zfs.package to ensure compatibility
-    
-  ] ++ [ config.boot.zfs.package ]
+      # ZFS userland (zpool, zfs) — align with kernel/module package
+      # Use the configured boot.zfs.package to ensure compatibility
+
+    ]
+    ++ [ config.boot.zfs.package ]
     # Btrfs snapshot/backup tooling (CLI)
-    ++ [ snapper btrbk ]
+    ++ [
+      snapper
+      btrbk
+    ]
     # Hardware utils and monitors
-    ++ [ pciutils usbutils lshw lsof strace gdb htop btop atop ];
+    ++ [
+      pciutils
+      usbutils
+      lshw
+      lsof
+      strace
+      gdb
+      htop
+      btop
+      atop
+    ];
 
   # Expose docs on the live ISO for quick reference
   environment.etc."ddubsos-docs".source = "${ddubsosDocs}/share/ddubsos-docs";
@@ -149,4 +214,3 @@ in
     }
   '';
 }
-
