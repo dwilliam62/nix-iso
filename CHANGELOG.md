@@ -10,6 +10,10 @@ All notable changes to this project will be documented in this file.
   - Generate hardware-configuration.nix with --no-filesystems and explicitly declare bcachefs subvolume mounts in configuration.nix to avoid incorrect auto-detection.
   - Add udevadm settle after mkfs.bcachefs to ensure by-uuid symlinks exist before mounting.
   - Mount helper now tries both subvolume= and subvol= options for broader compatibility.
+- mirror installers (scripts/install-zfs-boot-mirror.sh, scripts/install-btrfs-boot-mirror.sh):
+  - Fix DISK1/2 unbound variable under set -u by avoiding subshell in selection parsing.
+  - Change parse_selection to return status and set DISK1/DISK2 in the current shell; expose PARSE_ERR for detailed messages.
+  - Commit: "mirror installers: fix DISK1/2 unbound var by avoiding subshell; use return status + PARSE_ERR" (87630c1)
 
 ## [2025-08-25] ddubsos-iso
 - ZFS installers: adopt a practical dataset layout similar to btrfs @-style subvolumes using ZFS datasets.
