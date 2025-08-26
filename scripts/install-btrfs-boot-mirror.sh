@@ -132,32 +132,34 @@ done
 echo
 read -r -p "Select TWO disks by numbers (e.g., '1 2') or enter two device paths (e.g., '/dev/sda /dev/sdb'): " selection
 
+# Use status code + global PARSE_ERR; set DISK1/DISK2 in current shell
+PARSE_ERR=""
 parse_selection() {
   local sel="$1"
   sel=$(echo "$sel" | tr ',' ' ')
   read -r -a tokens <<<"$sel"
   if [ "${#tokens[@]}" -ne 2 ]; then
-    echo "expect_two"; return 0
+    PARSE_ERR="expect_two"; return 1
   fi
   local a="${tokens[0]}" b="${tokens[1]}"
   if [[ "$a" =~ ^/dev/ ]]; then
     DISK1="$a"; DISK2="$b"
   else
     if [[ ! "$a" =~ ^[0-9]+$ ]] || [[ ! "$b" =~ ^[0-9]+$ ]]; then
-      echo "invalid"; return 0
+      PARSE_ERR="invalid"; return 1
     fi
     if [ "$a" -lt 1 ] || [ "$a" -gt "${#avail_names[@]}" ] || [ "$b" -lt 1 ] || [ "$b" -gt "${#avail_names[@]}" ]; then
-      echo "out_of_range"; return 0
+      PARSE_ERR="out_of_range"; return 1
     fi
     DISK1="/dev/${avail_names[$((a-1))]}"
     DISK2="/dev/${avail_names[$((b-1))]}"
   fi
-  echo "ok"
+  PARSE_ERR=""
+  return 0
 }
 
-result=$(parse_selection "$selection")
-if [ "$result" != "ok" ]; then
-  case "$result" in
+if ! parse_selection "$selection"; then
+  case "$PARSE_ERR" in
     expect_two) echo "Please provide exactly two selections." >&2 ;;
     invalid) echo "Invalid input. Use numbers or device paths." >&2 ;;
     out_of_range) echo "Selection out of range." >&2 ;;
