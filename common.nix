@@ -61,7 +61,81 @@
     curl
     parted
     efibootmgr
+    tmux
   ];
+
+  # Provide a simple, compatible tmux configuration at /etc/tmux.conf
+  environment.etc."tmux.conf".text = ''
+    # Prefix on Ctrl-a (classic GNU screen feel)
+    set -g prefix C-a
+    unbind C-b
+    bind C-a send-prefix
+
+    # Mouse support
+    set -g mouse on
+
+    # Vi-style keys in copy-mode and status line
+    set -g mode-keys vi
+    set -g status-keys vi
+
+    # Start windows/panes at 1
+    set -g base-index 1
+    setw -g pane-base-index 1
+    set -g renumber-windows on
+
+    # Status bar at top
+    set -g status-position top
+
+    # 24-bit color passthrough; compatible default terminal inside tmux
+    set -sg terminal-overrides ",*:RGB"
+    set -g default-terminal "screen-256color"
+    # If you know tmux-256color exists on your systems, you can use:
+    # set -g default-terminal "tmux-256color"
+
+    # History
+    set -g history-limit 5000
+
+    # Unbind default split keys (we’ll rebind below)
+    unbind %
+    unbind '"'
+
+    # Directional pane selection (prefix + h/j/k/l)
+    bind h select-pane -L
+    bind j select-pane -D
+    bind k select-pane -U
+    bind l select-pane -R
+
+    # Quick kill pane
+    bind x kill-pane
+
+    # Split using current pane path
+    bind '|' split-window  -h  -c "#{pane_current_path}"
+    bind '\\' split-window  -fh -c "#{pane_current_path}"
+    bind '-' split-window  -v  -c "#{pane_current_path}"
+    bind '_' split-window  -fv -c "#{pane_current_path}"
+
+    # Basic window controls
+    bind c new-window
+    bind n next-window
+    bind p previous-window
+
+    # Reload config
+    unbind r
+    bind r source-file /etc/tmux.conf \; display-message "Reloaded /etc/tmux.conf"
+
+    # Toggle zoom
+    bind -r m resize-pane -Z
+
+    # Handy utilities
+    bind t clock-mode
+    bind q display-panes
+    bind u refresh-client
+    bind o select-pane -t :.+
+
+    # NOTE:
+    # - Removed popups/menus and external tool bindings for maximum compatibility.
+    # - Avoid terminal-specific or version-specific features.
+  '';
 
   # Wireless network and wired network is enabled by default
 }

@@ -46,8 +46,14 @@ All notable changes to this project will be documented in this file.
     - Harden bcachefs mounted check to avoid false positives; print detected mounts.
     - Ensure PATH includes common sbin locations; add missing runtime requires.
     - Fix parted error: remove unsupported fs-type token from mkpart (bcachefs); name the partition; format with mkfs.bcachefs.
-    - Force FS type on mounts (-t bcachefs) and use subvol=@ syntax to avoid misleading "not btrfs subvolumes" messages.
     - Further suppress helper noise by mounting top-level and bind-mounting subvolumes (no subvol mount options); remount nodev/noexec on log/cache/tmp.
+    - Remove btrfs-only mount options (compress=) from bcachefs mounts; use only noatime; rename subvolumes to simple names (root, home, nix, var, var-*) and bind from a staging mount.
+
+- Shell/Terminals: Add tmux with system-wide /etc/tmux.conf (simple, broadly compatible)
+  - Provide sane defaults: prefix C-a, mouse on, vi keys, base-index 1, pane-base-index 1
+  - Set status bar at top, 24-bit color override, default-terminal screen-256color
+  - Directional pane movement, splits preserve working dir, basic zoom/reload utilities
+  - Avoid popups/menus and terminal-specific features for ISO compatibility
 
 Future considerations
 - Snapshots/retention management: enable services.sanoid or services.zfs.autoSnapshot with sensible policies; mark noisy datasets as non-snapshotted.

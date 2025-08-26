@@ -201,14 +201,15 @@ mkfs.bcachefs -f --compression=zstd -L nixos "$P2"
 printf '\nCreating subvolumes ...\n'
 mkdir -p /mnt
 mount -t bcachefs "$P2" /mnt
-bcachefs subvolume create /mnt/@
-bcachefs subvolume create /mnt/@home
-bcachefs subvolume create /mnt/@nix
-bcachefs subvolume create /mnt/@var
-bcachefs subvolume create /mnt/@var_log
-bcachefs subvolume create /mnt/@var_cache
-bcachefs subvolume create /mnt/@var_tmp
-bcachefs subvolume create /mnt/@var_lib
+# Use simple names (avoid '@' to prevent tooling confusion)
+bcachefs subvolume create /mnt/root
+bcachefs subvolume create /mnt/home
+bcachefs subvolume create /mnt/nix
+bcachefs subvolume create /mnt/var
+bcachefs subvolume create /mnt/var-log
+bcachefs subvolume create /mnt/var-cache
+bcachefs subvolume create /mnt/var-tmp
+bcachefs subvolume create /mnt/var-lib
 umount /mnt
 
 # Mount target
@@ -216,18 +217,18 @@ printf '\nMounting target ...\n'
 FSUUID=$(blkid -s UUID -o value "$P2")
 # Mount the filesystem top-level to a staging path
 mkdir -p /mnt /mnt/.top
-mount -t bcachefs -o compress=zstd,noatime "/dev/disk/by-uuid/$FSUUID" /mnt/.top
+mount -t bcachefs -o noatime "/dev/disk/by-uuid/$FSUUID" /mnt/.top
 # Bind the root subvolume to become the visible root at /mnt
-mount --bind /mnt/.top/@ /mnt
+mount --bind /mnt/.top/root /mnt
 # Now create mount points under the bound root
 mkdir -p /mnt/{home,nix,boot,var,var/log,var/cache,var/tmp,var/lib}
 # Bind-mount subvolumes to their target paths
-mount --bind /mnt/.top/@home /mnt/home
-mount --bind /mnt/.top/@nix /mnt/nix
-mount --bind /mnt/.top/@var_log /mnt/var/log
-mount --bind /mnt/.top/@var_cache /mnt/var/cache
-mount --bind /mnt/.top/@var_tmp /mnt/var/tmp
-mount --bind /mnt/.top/@var_lib /mnt/var/lib
+mount --bind /mnt/.top/home /mnt/home
+mount --bind /mnt/.top/nix /mnt/nix
+mount --bind /mnt/.top/var-log /mnt/var/log
+mount --bind /mnt/.top/var-cache /mnt/var/cache
+mount --bind /mnt/.top/var-tmp /mnt/var/tmp
+mount --bind /mnt/.top/var-lib /mnt/var/lib
 # Tighten mount flags on sensitive locations
 mount -o remount,bind,nodev,noexec /mnt/var/log || true
 mount -o remount,bind,nodev,noexec /mnt/var/cache || true
