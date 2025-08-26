@@ -272,7 +272,7 @@ UUID_B=$(blkid -s UUID -o value "$P1B")
 # Write configuration.nix
 CFG=/mnt/etc/nixos/configuration.nix
 cat > "$CFG" <<NIXCONF
-{ pkgs, ... }:
+{ pkgs, lib, options, ... }:
 {
   imports = [ ./hardware-configuration.nix ];
 
@@ -280,13 +280,6 @@ cat > "$CFG" <<NIXCONF
     loader = {
       systemd-boot.enable = true;
       efi.canTouchEfiVariables = true;
-      # Replicate systemd-boot to second ESP mounted at /boot2
-      systemd-boot.mirroredBoots = [
-        {
-          path = "/boot2";
-          devices = [ "/dev/disk/by-uuid/${UUID_B}" ];
-        }
-      ];
     };
     kernelModules = [ "z3fold" ];
     kernelParams = [
@@ -296,6 +289,14 @@ cat > "$CFG" <<NIXCONF
       "zswap.zpool=z3fold"
     ];
   };
+
+  # Conditionally replicate systemd-boot to second ESP if the option exists in this nixpkgs
+  boot.loader.systemd-boot.mirroredBoots = lib.mkIf (lib.hasAttrByPath [ "boot" "loader" "systemd-boot" "mirroredBoots" ] options) [
+    {
+      path = "/boot2";
+      devices = [ "/dev/disk/by-uuid/${UUID_B}" ];
+    }
+  ];
 
   networking = {
     hostName = "${HOSTNAME}";
