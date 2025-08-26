@@ -19,6 +19,15 @@ What this project provides
   - GNOME (nixos-gnome)
 - COSMIC (nixos-cosmic, experimental)
 - Recovery (nixos-recovery)
+- NixOS UNSTABlE install scripts supporting
+  - ZFS'
+  - BTRFS
+  - XFS
+  - EXT4
+  - bcachefs
+ - Documentation for the OS install scripts is below
+ - There are dedicated links for each of the scripts below
+    
 
 Note about live ISO GUIs: The GNOME and COSMIC profiles change only the live ISO
 user interface. The installers do NOT install GNOME or COSMIC onto the target
@@ -54,6 +63,7 @@ How to build the ISOs
 - Clone:
   - git clone https://github.com/dwilliam62/nix-iso.git
   - cd nix-iso
+  - Suggest running `nix flake update` 
 
 Preferred (helper script)
 
@@ -146,12 +156,15 @@ Using the installer scripts (on the live ISO or any NixOS live env)
   - install-xfs.sh — XFS installer (enable fstrim in config)
   - install-zfs.sh — ZFS with sensible defaults; legacy mountpoints; generates
     networking.hostId
-  > These scripts should be considered EXPERMIMENTAL They are currently a
+  -  
+  > The following scripts should be considered EXPERMIMENTAL They are currently a
   > work-in-progress (Aug 2025) None should be used for production purposes of
-  > any kind
+  > any kind.  *You have been warned!*
+  -
   - install-bcachefs.sh — bcachefs with --compression=zstd
   - install-zfs-boot-mirror.sh — ZFS mirroring on boot drive
   - install-btrfs-boot-mirror.sh — Btrfs mirroring on boot drive
+    
 - Run as root; the scripts will self-elevate via sudo when possible:
   ```
   sudo ./scripts/install-btrfs.sh
