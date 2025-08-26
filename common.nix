@@ -109,10 +109,10 @@
     bind x kill-pane
 
     # Split using current pane path
-    bind '|' split-window  -h  -c "#{pane_current_path}"
-    bind '\\' split-window  -fh -c "#{pane_current_path}"
-    bind '-' split-window  -v  -c "#{pane_current_path}"
-    bind '_' split-window  -fv -c "#{pane_current_path}"
+    bind '|' split-window -h -c "#{pane_current_path}"
+    bind "\\" split-window -fh -c "#{pane_current_path}"
+    bind '-' split-window -v -c "#{pane_current_path}"
+    bind '_' split-window -fv -c "#{pane_current_path}"
 
     # Basic window controls
     bind c new-window

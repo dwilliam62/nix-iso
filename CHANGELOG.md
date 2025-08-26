@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2025-08-26] ddubsos-iso
+- bcachefs installer (scripts/install-bcachefs.sh):
+  - Add user-facing note at destructive confirmation explaining that messages like "ERROR: not a btrfs filesystem: /mnt/..." are benign probes from btrfs tools during config/mount inspection and can be safely ignored when installing to bcachefs.
+  - Generate hardware-configuration.nix with --no-filesystems and explicitly declare bcachefs subvolume mounts in configuration.nix to avoid incorrect auto-detection.
+  - Add udevadm settle after mkfs.bcachefs to ensure by-uuid symlinks exist before mounting.
+  - Mount helper now tries both subvolume= and subvol= options for broader compatibility.
+
 ## [2025-08-25] ddubsos-iso
 - ZFS installers: adopt a practical dataset layout similar to btrfs @-style subvolumes using ZFS datasets.
 - bcachefs installer: adopt structured subvolume layout and initrd support.

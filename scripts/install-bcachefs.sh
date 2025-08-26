@@ -167,6 +167,13 @@ fi
 # Final confirmation
 echo
 echo "WARNING: This will destroy ALL data on $DISK"
+# Note about benign tool noise during mounting/config generation
+cat <<'NOTE'
+INFO: During the mounting/config generation phase, you may see messages like:
+  "ERROR: not a btrfs filesystem: /mnt/..."
+These come from btrfs tools probing paths while we are installing to bcachefs.
+They are harmless and can be safely ignored for this installer.
+NOTE
 read -r -p "Type 'INSTALL' to proceed: " confirm
 [ "$confirm" = "INSTALL" ] || { echo "Aborted"; exit 1; }
 
@@ -196,6 +203,10 @@ fi
 printf '\nCreating filesystems ...\n'
 mkfs.fat -F32 -n EFI "$P1"
 mkfs.bcachefs -f --compression=zstd -L nixos "$P2"
+# Allow udev to create by-uuid symlinks before we use them
+if command -v udevadm >/dev/null 2>&1; then
+  udevadm settle || true
+fi
 
 # Subvolumes
 printf '\nCreating subvolumes ...\n'
@@ -215,32 +226,33 @@ umount /mnt
 # Mount target
 printf '\nMounting target ...\n'
 FSUUID=$(blkid -s UUID -o value "$P2")
-# Mount the filesystem top-level to a staging path
-mkdir -p /mnt /mnt/.top
-mount -t bcachefs -o noatime "/dev/disk/by-uuid/$FSUUID" /mnt/.top
-# Bind the root subvolume to become the visible root at /mnt
-mount --bind /mnt/.top/root /mnt
-# Now create mount points under the bound root
+BOOTUUID=$(blkid -s UUID -o value "$P1")
+DEV="/dev/disk/by-uuid/$FSUUID"
+if [ ! -e "$DEV" ]; then
+  DEV="$P2"
+fi
+# Helper to mount a bcachefs subvolume with broad compatibility
+mount_subvol() {
+  local name="$1" target="$2" extra="${3:-}"
+  mount -t bcachefs -o "noatime${extra:+,$extra},subvolume=${name}" "$DEV" "$target" 2>/dev/null || \
+  mount -t bcachefs -o "noatime${extra:+,$extra},subvol=${name}" "$DEV" "$target"
+}
+# Mount root subvolume directly
+mount -t bcachefs -o noatime,subvolume=root "$DEV" /mnt || mount -t bcachefs -o noatime,subvol=root "$DEV" /mnt
+# Create mount points under root
 mkdir -p /mnt/{home,nix,boot,var,var/log,var/cache,var/tmp,var/lib}
-# Bind-mount subvolumes to their target paths
-mount --bind /mnt/.top/home /mnt/home
-mount --bind /mnt/.top/nix /mnt/nix
-mount --bind /mnt/.top/var-log /mnt/var/log
-mount --bind /mnt/.top/var-cache /mnt/var/cache
-mount --bind /mnt/.top/var-tmp /mnt/var/tmp
-mount --bind /mnt/.top/var-lib /mnt/var/lib
-# Tighten mount flags on sensitive locations
-mount -o remount,bind,nodev,noexec /mnt/var/log || true
-mount -o remount,bind,nodev,noexec /mnt/var/cache || true
-mount -o remount,bind,nodev,noexec /mnt/var/tmp || true
-# Optionally detach the staging mount to avoid appearing in generated config
-umount /mnt/.top || true
-rmdir /mnt/.top 2>/dev/null || true
+# Mount remaining subvolumes directly by name
+mount_subvol home /mnt/home
+mount_subvol nix /mnt/nix
+mount_subvol var-log /mnt/var/log nodev,noexec
+mount_subvol var-cache /mnt/var/cache nodev,noexec
+mount_subvol var-tmp /mnt/var/tmp
+mount_subvol var-lib /mnt/var/lib
 # EFI system partition
 mount "$P1" /mnt/boot
 
-# Generate hardware config
-nixos-generate-config --root /mnt
+# Generate hardware config (skip auto filesystems; we'll declare them explicitly)
+nixos-generate-config --root /mnt --no-filesystems
 
 # Write configuration.nix
 CFG=/mnt/etc/nixos/configuration.nix
@@ -263,6 +275,50 @@ cat > "$CFG" <<NIXCONF
       "zswap.max_pool_percent=20"
       "zswap.zpool=z3fold"
     ];
+  };
+
+  # Declare filesystems explicitly for bcachefs subvolumes
+  fileSystems = {
+    "/" = {
+      device = "/dev/disk/by-uuid/${FSUUID}";
+      fsType = "bcachefs";
+      options = [ "noatime" "subvolume=root" ];
+    };
+    "/home" = {
+      device = "/dev/disk/by-uuid/${FSUUID}";
+      fsType = "bcachefs";
+      options = [ "noatime" "subvolume=home" ];
+    };
+    "/nix" = {
+      device = "/dev/disk/by-uuid/${FSUUID}";
+      fsType = "bcachefs";
+      options = [ "noatime" "subvolume=nix" ];
+    };
+    "/var/log" = {
+      device = "/dev/disk/by-uuid/${FSUUID}";
+      fsType = "bcachefs";
+      options = [ "noatime" "nodev" "noexec" "subvolume=\"var-log\"" ];
+    };
+    "/var/cache" = {
+      device = "/dev/disk/by-uuid/${FSUUID}";
+      fsType = "bcachefs";
+      options = [ "noatime" "nodev" "noexec" "subvolume=\"var-cache\"" ];
+    };
+    "/var/tmp" = {
+      device = "/dev/disk/by-uuid/${FSUUID}";
+      fsType = "bcachefs";
+      options = [ "noatime" "subvolume=\"var-tmp\"" ];
+    };
+    "/var/lib" = {
+      device = "/dev/disk/by-uuid/${FSUUID}";
+      fsType = "bcachefs";
+      options = [ "noatime" "subvolume=\"var-lib\"" ];
+    };
+    "/boot" = {
+      device = "/dev/disk/by-uuid/${BOOTUUID}";
+      fsType = "vfat";
+      options = [ "fmask=0022" "dmask=0022" ];
+    };
   };
 
   networking = {
