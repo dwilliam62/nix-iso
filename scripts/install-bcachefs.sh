@@ -214,23 +214,27 @@ umount /mnt
 # Mount target
 printf '\nMounting target ...\n'
 FSUUID=$(blkid -s UUID -o value "$P2")
-# Mount the filesystem root (top-level)
-mount -t bcachefs -o compress=zstd,noatime "/dev/disk/by-uuid/$FSUUID" /mnt
-# First, bind the root subvolume to become the visible root
-mount --bind /mnt/@ /mnt
+# Mount the filesystem top-level to a staging path
+mkdir -p /mnt /mnt/.top
+mount -t bcachefs -o compress=zstd,noatime "/dev/disk/by-uuid/$FSUUID" /mnt/.top
+# Bind the root subvolume to become the visible root at /mnt
+mount --bind /mnt/.top/@ /mnt
 # Now create mount points under the bound root
 mkdir -p /mnt/{home,nix,boot,var,var/log,var/cache,var/tmp,var/lib}
 # Bind-mount subvolumes to their target paths
-mount --bind /mnt/@home /mnt/home
-mount --bind /mnt/@nix /mnt/nix
-mount --bind /mnt/@var_log /mnt/var/log
-mount --bind /mnt/@var_cache /mnt/var/cache
-mount --bind /mnt/@var_tmp /mnt/var/tmp
-mount --bind /mnt/@var_lib /mnt/var/lib
+mount --bind /mnt/.top/@home /mnt/home
+mount --bind /mnt/.top/@nix /mnt/nix
+mount --bind /mnt/.top/@var_log /mnt/var/log
+mount --bind /mnt/.top/@var_cache /mnt/var/cache
+mount --bind /mnt/.top/@var_tmp /mnt/var/tmp
+mount --bind /mnt/.top/@var_lib /mnt/var/lib
 # Tighten mount flags on sensitive locations
 mount -o remount,bind,nodev,noexec /mnt/var/log || true
-mount -o remount,bind,nodev/noexec /mnt/var/cache || true
-mount -o remount,bind,nodev/noexec /mnt/var/tmp || true
+mount -o remount,bind,nodev,noexec /mnt/var/cache || true
+mount -o remount,bind,nodev,noexec /mnt/var/tmp || true
+# Optionally detach the staging mount to avoid appearing in generated config
+umount /mnt/.top || true
+rmdir /mnt/.top 2>/dev/null || true
 # EFI system partition
 mount "$P1" /mnt/boot
 
