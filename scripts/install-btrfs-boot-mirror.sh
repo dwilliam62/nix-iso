@@ -272,16 +272,23 @@ UUID_B=$(blkid -s UUID -o value "$P1B")
 # Write configuration.nix
 CFG=/mnt/etc/nixos/configuration.nix
 cat > "$CFG" <<NIXCONF
-{ pkgs, lib, options, ... }:
-let
-  hasMirroredBoots = lib.hasAttrByPath [ "boot" "loader" "systemd-boot" "mirroredBoots" ] options;
-in
+{ pkgs, lib, ... }:
 {
   imports = [ ./hardware-configuration.nix ];
 
   boot = {
     loader = {
-      systemd-boot.enable = true;
+      systemd-boot = {
+        enable = true;
+        # NOTE: mirroredBoots is commented out to avoid infinite recursion
+        # Uncomment the following lines if your NixOS version supports mirroredBoots:
+        # mirroredBoots = [
+        #   {
+        #     path = "/boot2";
+        #     devices = [ "/dev/disk/by-uuid/${UUID_B}" ];
+        #   }
+        # ];
+      };
       efi.canTouchEfiVariables = true;
     };
     kernelModules = [ "z3fold" ];
@@ -331,14 +338,6 @@ ${HASH_LINE:+${HASH_LINE}}
   };
 
   system.stateVersion = "25.11";
-}
-// lib.optionalAttrs hasMirroredBoots {
-  boot.loader.systemd-boot.mirroredBoots = [
-    {
-      path = "/boot2";
-      devices = [ "/dev/disk/by-uuid/${UUID_B}" ];
-    }
-  ];
 }
 NIXCONF
 
