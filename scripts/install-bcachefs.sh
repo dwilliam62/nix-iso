@@ -214,14 +214,22 @@ umount /mnt
 # Mount target
 printf '\nMounting target ...\n'
 FSUUID=$(blkid -s UUID -o value "$P2")
-mount -t bcachefs -o compress=zstd,noatime,subvolume=/@ "/dev/disk/by-uuid/$FSUUID" /mnt
+# Mount the filesystem root (top-level)
+mount -t bcachefs -o compress=zstd,noatime "/dev/disk/by-uuid/$FSUUID" /mnt
+# Bind-mount subvolumes to their target paths to avoid any btrfs helper ambiguity
 mkdir -p /mnt/{home,nix,boot,var,var/log,var/cache,var/tmp,var/lib}
-mount -t bcachefs -o compress=zstd,noatime,subvolume=/@home "/dev/disk/by-uuid/$FSUUID" /mnt/home
-mount -t bcachefs -o compress=zstd,noatime,subvolume=/@nix "/dev/disk/by-uuid/$FSUUID" /mnt/nix
-mount -t bcachefs -o compress=zstd,noatime,subvolume=/@var_log,nodev,noexec "/dev/disk/by-uuid/$FSUUID" /mnt/var/log
-mount -t bcachefs -o compress=zstd,noatime,subvolume=/@var_cache,nodev/noexec "/dev/disk/by-uuid/$FSUUID" /mnt/var/cache
-mount -t bcachefs -o compress=zstd,noatime,subvolume=/@var_tmp,nodev,noexec "/dev/disk/by-uuid/$FSUUID" /mnt/var/tmp
-mount -t bcachefs -o compress=zstd,noatime,subvolume=/@var_lib "/dev/disk/by-uuid/$FSUUID" /mnt/var/lib
+mount --bind /mnt/@ /mnt
+mount --bind /mnt/@home /mnt/home
+mount --bind /mnt/@nix /mnt/nix
+mount --bind /mnt/@var_log /mnt/var/log
+mount --bind /mnt/@var_cache /mnt/var/cache
+mount --bind /mnt/@var_tmp /mnt/var/tmp
+mount --bind /mnt/@var_lib /mnt/var/lib
+# Tighten mount flags on sensitive locations
+mount -o remount,bind,nodev,noexec /mnt/var/log || true
+mount -o remount,bind,nodev,noexec /mnt/var/cache || true
+mount -o remount,bind,nodev,noexec /mnt/var/tmp || true
+# EFI system partition
 mount "$P1" /mnt/boot
 
 # Generate hardware config

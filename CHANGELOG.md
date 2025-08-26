@@ -47,6 +47,7 @@ All notable changes to this project will be documented in this file.
     - Ensure PATH includes common sbin locations; add missing runtime requires.
     - Fix parted error: remove unsupported fs-type token from mkpart (bcachefs); name the partition; format with mkfs.bcachefs.
     - Force FS type on mounts (-t bcachefs) and use subvol=@ syntax to avoid misleading "not btrfs subvolumes" messages.
+    - Further suppress helper noise by mounting top-level and bind-mounting subvolumes (no subvol mount options); remount nodev/noexec on log/cache/tmp.
 
 Future considerations
 - Snapshots/retention management: enable services.sanoid or services.zfs.autoSnapshot with sensible policies; mark noisy datasets as non-snapshotted.
