@@ -1,3 +1,5 @@
+English | [Español](./quickstart-bcachefs.es.md)
+
 # Quickstart: bcachefs installer (experimental)
 
 Use this when experimenting with bcachefs on a single disk. Not recommended for production.

@@ -1,3 +1,5 @@
+English | [Español](./filesystem-defaults.es.md)
+
 # Filesystem installer defaults
 
 This document summarizes the default parameters and settings used by the interactive installer scripts in scripts/ for each supported filesystem.

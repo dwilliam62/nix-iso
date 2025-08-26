@@ -1,3 +1,5 @@
+English | [Español](./Tools-Included.es.md)
+
 # Live ISO Toolset (included in all profiles)
 
 This document lists the tooling included on all ISO profiles (minimal, GNOME, COSMIC), grouped by category.

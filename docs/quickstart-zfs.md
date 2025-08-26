@@ -1,3 +1,5 @@
+English | [Español](./quickstart-zfs.es.md)
+
 # Quickstart: ZFS installer
 
 Use this when installing NixOS on a single disk with ZFS root.

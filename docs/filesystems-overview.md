@@ -1,3 +1,5 @@
+English | [Español](./filesystems-overview.es.md)
+
 # NixOS installer reference: ZFS, Btrfs, and bcachefs
 
 This guide complements the interactive installer scripts under scripts/.

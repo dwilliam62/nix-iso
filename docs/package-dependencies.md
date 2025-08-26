@@ -1,3 +1,5 @@
+English | [Español](./package-dependencies.es.md)
+
 # Package dependencies
 
 This document lists the required packages/tools for:

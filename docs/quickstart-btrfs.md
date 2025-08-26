@@ -1,3 +1,5 @@
+English | [Español](./quickstart-btrfs.es.md)
+
 # Quickstart: Btrfs installer
 
 Use this when installing NixOS on a single disk with Btrfs.

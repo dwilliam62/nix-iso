@@ -1,3 +1,5 @@
+English | [Español](./quickstart-zfs-mirror.es.md)
+
 # Quickstart: ZFS mirrored boot installer
 
 Use this when installing NixOS on two disks with a mirrored ZFS root and mirrored bootloader.

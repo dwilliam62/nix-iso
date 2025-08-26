@@ -1,3 +1,5 @@
+[English](./README.md) | Español
+
 # ddubsos ISOs de instalación/recuperación de NixOS
 
 ISOs personalizadas de instalación y recuperación de NixOS basadas en nixos-unstable, con enfoque en soporte moderno de sistemas de archivos (Btrfs, ZFS, XFS, ext4, bcachefs) y un conjunto sólido de herramientas de recuperación.
@@ -168,7 +170,7 @@ Notas sobre valores predeterminados
 
 Resumen de herramientas incluidas
 
-- Consulta Tools-Included.md para la lista completa y actualizada de herramientas incluidas en
+- Consulta Tools-Included.es.md para la lista completa y actualizada de herramientas incluidas en
   el ISO en vivo.
 - La documentación está disponible en el ISO en vivo bajo /etc/ddubsos-docs (README.md,
   HOWTO.md, Tools-Included.md, docs/*).
@@ -176,26 +178,26 @@ Resumen de herramientas incluidas
 Documentación
 
 - Descripción general de sistemas de archivos:
-  [docs/filesystems-overview.md](docs/filesystems-overview.md)
+  [docs/filesystems-overview.es.md](docs/filesystems-overview.es.md)
 - Valores predeterminados y parámetros:
-  [docs/filesystem-defaults.md](docs/filesystem-defaults.md)
+  [docs/filesystem-defaults.es.md](docs/filesystem-defaults.es.md)
 - Dependencias de paquetes:
-  [docs/package-dependencies.md](docs/package-dependencies.md)
+  [docs/package-dependencies.es.md](docs/package-dependencies.es.md)
 - Guías rápidas (Quickstarts):
-  - ZFS (disco único): [docs/quickstart-zfs.md](docs/quickstart-zfs.md)
+  - ZFS (disco único): [docs/quickstart-zfs.es.md](docs/quickstart-zfs.es.md)
   - ZFS (en espejo):
-    [docs/quickstart-zfs-mirror.md](docs/quickstart-zfs-mirror.md)
-  - Btrfs (disco único): [docs/quickstart-btrfs.md](docs/quickstart-btrfs.md)
+    [docs/quickstart-zfs-mirror.es.md](docs/quickstart-zfs-mirror.es.md)
+  - Btrfs (disco único): [docs/quickstart-btrfs.es.md](docs/quickstart-btrfs.es.md)
   - Btrfs (en espejo):
-    [docs/quickstart-btrfs-mirror.md](docs/quickstart-btrfs-mirror.md)
+    [docs/quickstart-btrfs-mirror.es.md](docs/quickstart-btrfs-mirror.es.md)
   - bcachefs (experimental):
-    [docs/quickstart-bcachefs.md](docs/quickstart-bcachefs.md)
+    [docs/quickstart-bcachefs.es.md](docs/quickstart-bcachefs.es.md)
 - Playbook no interactivo para Btrfs:
-  [docs/nixos-btrfs-install.md](docs/nixos-btrfs-install.md)
+  [docs/nixos-btrfs-install.es.md](docs/nixos-btrfs-install.es.md)
 
 Licencia y contribuciones
 
-- Licenciado bajo Apache-2.0 (ver LICENSE). El software de terceros permanece bajo
+- Licenciado bajo Apache-2.0 (ver LICENSE). Traducción: [LICENSE.es.md](./LICENSE.es.md) (referencia; la versión en inglés es la oficial). El software de terceros permanece bajo
   sus respectivas licencias.
 - Las contribuciones son bienvenidas vía issues y PRs.
 

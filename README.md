@@ -1,3 +1,5 @@
+English | [Español](./README.es.md)
+
 # ddubsos NixOS Install/Recovery ISOs
 
 Custom NixOS install and recovery ISOs based on nixos-unstable, with a focus on
@@ -233,7 +235,7 @@ Documentation
 
 License and contributions
 
-- Licensed under Apache-2.0 (see LICENSE). Third-party software remains under
+- Licensed under Apache-2.0 (see LICENSE). Spanish translation: [LICENSE.es.md](./LICENSE.es.md) (non-authoritative). Third-party software remains under
   their respective licenses.
 - Contributions are welcome via issues and PRs.
 

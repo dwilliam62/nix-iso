@@ -1,3 +1,5 @@
+English | [Español](./quickstart-btrfs-mirror.es.md)
+
 # Quickstart: Btrfs mirrored boot installer
 
 Use this when installing NixOS on two disks with a mirrored Btrfs root and mirrored bootloader.

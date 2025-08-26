@@ -1,3 +1,5 @@
+English | [Español](./HOWTO.es.md)
+
 # Nix-ISO repo at a glance
 
 This repo builds custom NixOS installation ISOs (unstable) with three profiles:
