@@ -139,16 +139,19 @@ nyx.chaotic.cx-1:HfnXSw4pj95iI/n17rIDy40agHj12WfF+Gqk6SonIT8=
 
 Using the installer scripts (on the live ISO or any NixOS live env)
 
-- Available scripts in scripts:
-  - install-bcachefs.sh — bcachefs with --compression=zstd
+- Available scripts in `~/nix-iso/scripts`:
   - install-btrfs.sh — Btrfs with subvolumes @, @home, @nix, @snapshots; zstd
     compression
-  - install-btrfs-boot-mirror.sh — Btrfs mirroring on boot drive
   - install-ext4.sh — ext4 installer (enable fstrim in config)
   - install-xfs.sh — XFS installer (enable fstrim in config)
   - install-zfs.sh — ZFS with sensible defaults; legacy mountpoints; generates
     networking.hostId
+  > These scripts should be considered EXPERMIMENTAL They are currently a
+  > work-in-progress (Aug 2025) None should be used for production purposes of
+  > any kind
+  - install-bcachefs.sh — bcachefs with --compression=zstd
   - install-zfs-boot-mirror.sh — ZFS mirroring on boot drive
+  - install-btrfs-boot-mirror.sh — Btrfs mirroring on boot drive
 - Run as root; the scripts will self-elevate via sudo when possible:
   ```
   sudo ./scripts/install-btrfs.sh
@@ -157,13 +160,25 @@ Using the installer scripts (on the live ISO or any NixOS live env)
 
 Mirror installers (experimental; use at your own risk)
 
-- Scripts: scripts/install-zfs-boot-mirror.sh and scripts/install-btrfs-boot-mirror.sh
-- Purpose: set up a mirrored root (ZFS/Btrfs) and two EFI System Partitions (/boot and /boot2). On newer nixpkgs, systemd-boot can automatically replicate the bootloader to /boot2.
+- Scripts: scripts/install-zfs-boot-mirror.sh and
+  scripts/install-btrfs-boot-mirror.sh
+- Purpose: set up a mirrored root (ZFS/Btrfs) and two EFI System Partitions
+  (/boot and /boot2). On newer nixpkgs, systemd-boot can automatically replicate
+  the bootloader to /boot2.
 - Compatibility:
-  - The auto-replication relies on the nixpkgs option boot.loader.systemd-boot.mirroredBoots. The installers detect its presence and enable it when available.
-  - On older nixpkgs snapshots that don’t provide this option, installs still succeed; only the auto-sync of /boot -> /boot2 is skipped. The ZFS/Btrfs storage mirrors are unaffected.
-  - To ensure current features on the live ISO, update this repo’s flake.lock (nix flake update) and rebuild the ISO.
-- Warning: these mirror installers are experimental and not intended for production use. Use at your own risk. Test thoroughly, keep backups, and ensure you have a fallback boot path (e.g., firmware boot entry for the second ESP).
+  - The auto-replication relies on the nixpkgs option
+    boot.loader.systemd-boot.mirroredBoots. The installers detect its presence
+    and enable it when available.
+  - On older nixpkgs snapshots that don’t provide this option, installs still
+    succeed; only the auto-sync of /boot -> /boot2 is skipped. The ZFS/Btrfs
+    storage mirrors are unaffected.
+  - To ensure current features on the live ISO, update this repo’s flake.lock
+    (nix flake update) and rebuild the ISO.
+
+> Warning: these mirror installers are experimental and not intended for
+> production use. Use at your own risk. Test thoroughly, keep backups, and
+> ensure you have a fallback boot path (e.g., firmware boot entry for the second
+> ESP).
 
 Notes on defaults
 
