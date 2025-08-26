@@ -272,9 +272,9 @@ UUID_B=$(blkid -s UUID -o value "$P1B")
 # Write configuration.nix
 CFG=/mnt/etc/nixos/configuration.nix
 cat > "$CFG" <<NIXCONF
-{ pkgs, lib, options, ... }:
+{ config, pkgs, lib, ... }:
 let
-  hasMirroredBoots = lib.hasAttrByPath [ "boot" "loader" "systemd-boot" "mirroredBoots" ] options;
+  hasMirroredBoots = lib.hasAttrByPath [ "boot" "loader" "systemd-boot" "mirroredBoots" ] config;
 in
 {
   imports = [ ./hardware-configuration.nix ];
