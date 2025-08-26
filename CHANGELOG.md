@@ -13,7 +13,11 @@ All notable changes to this project will be documented in this file.
 - mirror installers (scripts/install-zfs-boot-mirror.sh, scripts/install-btrfs-boot-mirror.sh):
   - Fix DISK1/2 unbound variable under set -u by avoiding subshell in selection parsing.
   - Change parse_selection to return status and set DISK1/DISK2 in the current shell; expose PARSE_ERR for detailed messages.
-  - Commit: "mirror installers: fix DISK1/2 unbound var by avoiding subshell; use return status + PARSE_ERR" (87630c1)
+  - Gate use of boot.loader.systemd-boot.mirroredBoots so installs work on older nixpkgs snapshots that lack the option.
+    - First via lib.mkIf, then via lib.optionalAttrs to avoid defining nonexistent options, and finally checking presence through config to prevent module arg cycles.
+    - When the option is absent, the install proceeds without auto-replicating /boot -> /boot2; ZFS/Btrfs mirrors are unaffected.
+  - Warning: the mirror installers are experimental and not intended for production use. Use at your own risk.
+  - Commit references: 87630c1, 478b44c, da551f7, de5a415
 
 ## [2025-08-25] ddubsos-iso
 - ZFS installers: adopt a practical dataset layout similar to btrfs @-style subvolumes using ZFS datasets.

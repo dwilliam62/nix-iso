@@ -155,6 +155,16 @@ Using the installer scripts (on the live ISO or any NixOS live env)
   # or install-ext4.sh, install-xfs.sh, install-bcachefs.sh, install-zfs.sh
   ```
 
+Mirror installers (experimental; use at your own risk)
+
+- Scripts: scripts/install-zfs-boot-mirror.sh and scripts/install-btrfs-boot-mirror.sh
+- Purpose: set up a mirrored root (ZFS/Btrfs) and two EFI System Partitions (/boot and /boot2). On newer nixpkgs, systemd-boot can automatically replicate the bootloader to /boot2.
+- Compatibility:
+  - The auto-replication relies on the nixpkgs option boot.loader.systemd-boot.mirroredBoots. The installers detect its presence and enable it when available.
+  - On older nixpkgs snapshots that don’t provide this option, installs still succeed; only the auto-sync of /boot -> /boot2 is skipped. The ZFS/Btrfs storage mirrors are unaffected.
+  - To ensure current features on the live ISO, update this repo’s flake.lock (nix flake update) and rebuild the ISO.
+- Warning: these mirror installers are experimental and not intended for production use. Use at your own risk. Test thoroughly, keep backups, and ensure you have a fallback boot path (e.g., firmware boot entry for the second ESP).
+
 Notes on defaults
 
 - Partitioning: GPT with 1 GiB EFI System Partition (FAT32) + remainder for the
