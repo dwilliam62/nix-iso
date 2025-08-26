@@ -216,9 +216,11 @@ printf '\nMounting target ...\n'
 FSUUID=$(blkid -s UUID -o value "$P2")
 # Mount the filesystem root (top-level)
 mount -t bcachefs -o compress=zstd,noatime "/dev/disk/by-uuid/$FSUUID" /mnt
-# Bind-mount subvolumes to their target paths to avoid any btrfs helper ambiguity
-mkdir -p /mnt/{home,nix,boot,var,var/log,var/cache,var/tmp,var/lib}
+# First, bind the root subvolume to become the visible root
 mount --bind /mnt/@ /mnt
+# Now create mount points under the bound root
+mkdir -p /mnt/{home,nix,boot,var,var/log,var/cache,var/tmp,var/lib}
+# Bind-mount subvolumes to their target paths
 mount --bind /mnt/@home /mnt/home
 mount --bind /mnt/@nix /mnt/nix
 mount --bind /mnt/@var_log /mnt/var/log
@@ -227,8 +229,8 @@ mount --bind /mnt/@var_tmp /mnt/var/tmp
 mount --bind /mnt/@var_lib /mnt/var/lib
 # Tighten mount flags on sensitive locations
 mount -o remount,bind,nodev,noexec /mnt/var/log || true
-mount -o remount,bind,nodev,noexec /mnt/var/cache || true
-mount -o remount,bind,nodev,noexec /mnt/var/tmp || true
+mount -o remount,bind,nodev/noexec /mnt/var/cache || true
+mount -o remount,bind,nodev/noexec /mnt/var/tmp || true
 # EFI system partition
 mount "$P1" /mnt/boot
 
