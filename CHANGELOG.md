@@ -7,6 +7,9 @@ All notable changes to this project will be documented in this file.
 - GNOME ISO: replace Home Manager-style `dconf.settings` with NixOS `programs.dconf` to fix evaluation error
 - GNOME ISO: enable Desktop Icons NG (ding) and show Home/Trash icons; make extension package selection resilient across nixpkgs (desktop-icons-ng or ding)
 - GNOME ISO: mark Desktop .desktop entries as executable so they appear and can be launched without extra steps
+- TUI: add modular terminal menu (scripts/nix-iso) with sections:
+  - Install scripts (bcachefs marked "EXPERIMENTAL - Use at own risk"; mirror installers marked "Testing - not for production use")
+  - Documentation and links (offline HTML and GitHub repo)
 ## [2025-08-27] ddubsos-iso
 - Docs UX: Add offline HTML rendering for README (EN/ES) using pandoc during ISO build
   - Generate /etc/nix-iso-docs/README.html and README.es.html
