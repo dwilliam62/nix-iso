@@ -20,7 +20,7 @@ All notable changes to this project will be documented in this file.
   - services.spice-vdagentd.enable = true (SPICE clipboard/display integration)
   - virtualisation.virtualbox.guest.enable = true
   - services.vmwareGuest.enable = true
-  - services.hyperv-daemons.enable = true
+  - Hyper-V skipped: option not available on current nixpkgs snapshot; will re-enable when present
 
 ## [2025-08-26] ddubsos-iso
 - bcachefs installer (scripts/install-bcachefs.sh):

@@ -69,7 +69,6 @@
   services.spice-vdagentd.enable = true;
   virtualisation.virtualbox.guest.enable = true;
   services.vmwareGuest.enable = true;
-  services.hyperv-daemons.enable = true;
 
   # Provide a simple, compatible tmux configuration at /etc/tmux.conf
   environment.etc."tmux.conf".text = ''
