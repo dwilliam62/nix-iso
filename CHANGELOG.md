@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 - Fix: rename services.vmwareGuest to virtualisation.vmware.guest to address evaluation warning
 - GNOME ISO: replace Home Manager-style `dconf.settings` with NixOS `programs.dconf` to fix evaluation error
 - GNOME ISO: enable Desktop Icons NG (ding) and show Home/Trash icons; make extension package selection resilient across nixpkgs (desktop-icons-ng or ding)
+- GNOME ISO: mark Desktop .desktop entries as executable so they appear and can be launched without extra steps
 ## [2025-08-27] ddubsos-iso
 - Docs UX: Add offline HTML rendering for README (EN/ES) using pandoc during ISO build
   - Generate /etc/nix-iso-docs/README.html and README.es.html

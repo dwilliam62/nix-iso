@@ -221,10 +221,11 @@ in
   # This targets the standard live user 'nixos' provided by installation media.
   systemd.tmpfiles.rules = [
     "d /home/nixos/Desktop 0755 nixos users -"
-    "C /home/nixos/Desktop/nix-iso-docs.desktop 0644 nixos users - /etc/skel/Desktop/nix-iso-docs.desktop"
-    "C /home/nixos/Desktop/nix-iso-readme-en.desktop 0644 nixos users - /etc/skel/Desktop/nix-iso-readme-en.desktop"
-    "C /home/nixos/Desktop/nix-iso-readme-es.desktop 0644 nixos users - /etc/skel/Desktop/nix-iso-readme-es.desktop"
-    "C /home/nixos/Desktop/nix-iso-readme-online.desktop 0644 nixos users - /etc/skel/Desktop/nix-iso-readme-online.desktop"
+    # Make .desktop launchers executable so GNOME treats them as trusted/launchable
+    "C /home/nixos/Desktop/nix-iso-docs.desktop 0755 nixos users - /etc/skel/Desktop/nix-iso-docs.desktop"
+    "C /home/nixos/Desktop/nix-iso-readme-en.desktop 0755 nixos users - /etc/skel/Desktop/nix-iso-readme-en.desktop"
+    "C /home/nixos/Desktop/nix-iso-readme-es.desktop 0755 nixos users - /etc/skel/Desktop/nix-iso-readme-es.desktop"
+    "C /home/nixos/Desktop/nix-iso-readme-online.desktop 0755 nixos users - /etc/skel/Desktop/nix-iso-readme-online.desktop"
   ];
 
   # Provide a starter configuration at /etc/nixos/configuration.nix
