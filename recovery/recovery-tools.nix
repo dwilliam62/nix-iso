@@ -261,6 +261,17 @@ in
     "C /home/nixos/Desktop/nix-iso-launcher-cosmic.desktop 0755 nixos users - /etc/skel/Desktop/nix-iso-launcher-cosmic.desktop"
   ];
 
+  # Show a hint in graphical terminals (GNOME/COSMIC) when opening an interactive shell
+  environment.etc."profile.d/nix-iso-hint.sh".text = ''
+    case "$-" in
+      *i*) ;; # interactive
+      *) return ;; # not interactive
+    esac
+    if [ -n "${XDG_CURRENT_DESKTOP:-}" ]; then
+      printf "\nTo access menu -- run nix-iso\n\n"
+    fi
+  '';
+
   # Provide a starter configuration at /etc/nixos/configuration.nix
   # so users can quickly edit and run nixos-install.
   environment.etc."nixos/configuration.nix".text = ''

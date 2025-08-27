@@ -21,7 +21,7 @@
 
   # Show a hint after auto-login on console
   environment.loginShellInit = ''
-    echo "\nTo access menu -- run nix-iso\n"
+    printf "\nTo access menu -- run nix-iso\n\n"
   '';
 
   # Customize ISO filename to distinguish from standard NixOS ISOs

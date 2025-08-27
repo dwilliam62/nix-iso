@@ -12,7 +12,7 @@ All notable changes to this project will be documented in this file.
   - Install scripts (bcachefs marked "EXPERIMENTAL - Use at own risk"; mirror installers marked "Testing - not for production use")
   - Documentation and links (offline HTML and GitHub repo)
 - COSMIC ISO: Desktop launcher now uses a wrapper that opens a terminal explicitly and runs nix-iso; deduplicate icons with OnlyShowIn/NotShowIn so only one shows on COSMIC
-- Minimal ISO: print login hint "To access menu -- run nix-iso" after auto-login
+- Minimal ISO: print login hint "To access menu -- run nix-iso" after auto-login; also show this hint when opening a terminal in GNOME/COSMIC
 ## [2025-08-27] ddubsos-iso
 - Docs UX: Add offline HTML rendering for README (EN/ES) using pandoc during ISO build
   - Generate /etc/nix-iso-docs/README.html and README.es.html
