@@ -10,6 +10,12 @@ English | [Español](./README.es.md)
   <em>Screenshot: NixOS installation using XFS in the COSMIC Desktop GUI</em>
 </div>
 
+<div align="center">
+  <img src="img/nixos-install-cosmic-gui-2.png" alt="Screenshot: NixOS installation using XFS in the COSMIC Desktop GUI" width="80%" />
+  <br />
+  <em>Screenshot: NixOS installation menu </em>
+</div>
+
 ### Custom NixOS install and recovery ISOs based on nixos-unstable, with a focus on
 
 modern filesystem support (Btrfs, ZFS, XFS, ext4, bcachefs) and a robust
@@ -161,14 +167,17 @@ Using the installer scripts (on the live ISO or any NixOS live env)
 
 TUI installer menu
 
-- A simple terminal menu is available on the live ISO. To launch it, open a terminal and run:
+- A simple terminal menu is available on the live ISO. To launch it, open a
+  terminal and run:
   ```
   nix-iso
   ```
 - Title: NIXOS installer; sections:
   - Install scripts (with warnings shown for experimental/testing entries)
-  - Documentation and links (opens the offline docs at /etc/nix-iso-docs and the GitHub repo)
-- The same launcher may appear on the desktop as “NIXOS installer” on COSMIC/GNOME builds; if not visible, the CLI command above always works.
+  - Documentation and links (opens the offline docs at /etc/nix-iso-docs and the
+    GitHub repo)
+- The same launcher may appear on the desktop as “NIXOS installer” on
+  COSMIC/GNOME builds; if not visible, the CLI command above always works.
 
 - Available scripts in `~/nix-iso/scripts`:
   - install-btrfs.sh — Btrfs with subvolumes @, @home, @nix, @snapshots; zstd
