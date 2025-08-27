@@ -1,3 +1,7 @@
+# Author: Don Williams (aka ddubs)
+# Created: 2025-08-27
+# Project: https://github.com/dwilliam62/nix-iso
+
 # Recovery/Install ISO profile that reuses the shared recovery toolset
 { config, lib, pkgs, inputs, ... }:
 {

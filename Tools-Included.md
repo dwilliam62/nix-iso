@@ -1,3 +1,9 @@
+<!--
+Author: Don Williams (aka ddubs)
+Created: 2025-08-27
+Project: https://github.com/dwilliam62/nix-iso
+-->
+
 English | [Español](./Tools-Included.es.md)
 
 # Live ISO Toolset (included in all profiles)
