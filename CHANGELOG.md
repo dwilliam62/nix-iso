@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2025-08-27] ddubsos-iso
+- Docs UX: Add offline HTML rendering for README (EN/ES) using pandoc during ISO build
+  - Generate /etc/nix-iso-docs/README.html and README.es.html
+  - Keep Markdown sources and docs/ tree under /etc/nix-iso-docs
+- Desktop integration: Add .desktop entries for quick access to documentation
+  - Desktop icons (via /etc/skel/Desktop) and app grid entries (via /etc/xdg/applications)
+  - nix-iso Documentation opens /etc/nix-iso-docs
+  - nix-iso README (EN/ES) open offline HTML in the browser
+  - nix-iso README (Online) links to GitLab project page
+- Rename docs path on live ISO from /etc/ddubsos-docs to /etc/nix-iso-docs
+- VM guest services: enable guest daemons; systemd starts them only inside VMs
+  - services.qemuGuest.enable = true
+  - services.spice-vdagentd.enable = true (SPICE clipboard/display integration)
+  - virtualisation.virtualbox.guest.enable = true
+  - services.vmwareGuest.enable = true
+  - services.hyperv-daemons.enable = true
+
 ## [2025-08-26] ddubsos-iso
 - bcachefs installer (scripts/install-bcachefs.sh):
   - Add user-facing note at destructive confirmation explaining that messages like "ERROR: not a btrfs filesystem: /mnt/..." are benign probes from btrfs tools during config/mount inspection and can be safely ignored when installing to bcachefs.
