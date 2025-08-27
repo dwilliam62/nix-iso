@@ -120,8 +120,9 @@ section_menu() {
     echo
     echo "$(color_cyan ">> Running: ${ITEM_LABEL[$item_id]}")"
     echo
-    # Run the item command in an interactive subshell
-    bash -c "${ITEM_CMD[$item_id]}" || true
+    # Run the item command in the current shell so module-defined helpers are available
+    # Using eval here allows function calls like _open_or_print to work.
+    eval "${ITEM_CMD[$item_id]}" || true
     echo
     read -rp "Press Enter to return to menu..." _
   done
