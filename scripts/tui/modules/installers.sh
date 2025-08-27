@@ -16,33 +16,40 @@ _add_installer_item() {
   fi
 }
 
-# Bcachefs (EXPERIMENTAL)
+# Group: Standard installers
+register_header installers "Standard installers"
+_add_installer_item \
+  btrfs \
+  "Install NixOS on Btrfs" \
+  "install-btrfs.sh"
+_add_installer_item \
+  xfs \
+  "Install NixOS on XFS" \
+  "install-xfs.sh"
+_add_installer_item \
+  ext4 \
+  "Install NixOS on ext4" \
+  "install-ext4.sh"
+_add_installer_item \
+  zfs \
+  "Install NixOS on ZFS" \
+  "install-zfs.sh"
+
+# Group: Experimental
+register_header installers "Experimental"
 _add_installer_item \
   bcachefs \
   "Install NixOS on Bcachefs" \
   "install-bcachefs.sh" \
   "EXPERIMENTAL - Use at own risk"
 
-# ZFS
-_add_installer_item \
-  zfs \
-  "Install NixOS on ZFS" \
-  "install-zfs.sh"
-
-# ZFS Mirror (Testing)
+# Group: Mirror installers (Testing)
+register_header installers "Mirror installers (Testing - not for production use)"
 _add_installer_item \
   zfs_mirror \
   "Install NixOS on ZFS Mirror" \
   "install-zfs-boot-mirror.sh" \
   "Testing - not for production use"
-
-# Btrfs
-_add_installer_item \
-  btrfs \
-  "Install NixOS on Btrfs" \
-  "install-btrfs.sh"
-
-# Btrfs Mirror (Testing)
 _add_installer_item \
   btrfs_mirror \
   "Install NixOS on Btrfs Mirror" \

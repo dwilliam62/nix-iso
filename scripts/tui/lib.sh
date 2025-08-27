@@ -19,6 +19,7 @@ declare -A SECTIONS_TITLES=()
 declare -A ITEM_LABEL=()
 declare -A ITEM_CMD=()
 declare -A ITEM_WARN=()
+declare -A ITEM_TYPE=() # action (default) | header
 
 register_section() {
   local id="$1" title="$2"
@@ -35,6 +36,15 @@ register_item() {
   ITEM_LABEL["$id"]="$label"
   ITEM_CMD["$id"]="$cmd"
   ITEM_WARN["$id"]="$warn_text"
+  ITEM_TYPE["$id"]="action"
+}
+
+register_header() {
+  local section_id="$1" label="$2"
+  local id="hdr_$(echo "$label" | tr ' A-Z' '_a-z' | tr -cd 'a-z0-9_')"
+  eval "SECTION_ITEMS_${section_id}+=(\"$id\")"
+  ITEM_LABEL["$id"]="$label"
+  ITEM_TYPE["$id"]="header"
 }
 
 # UI helpers
