@@ -26,6 +26,8 @@
 # Allow docs and scripts directories (track all files there)
 !docs/**
 !scripts/**
+# Allow repo-local hooks directory
+!/.githooks/**
 
 # Ignore results of the build
 result
