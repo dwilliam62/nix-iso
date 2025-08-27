@@ -6,21 +6,31 @@
   ...
 }:
 let
-  ddubsosDocs = pkgs.stdenv.mkDerivation {
-    pname = "ddubsos-docs";
+  nixIsoDocs = pkgs.stdenv.mkDerivation {
+    pname = "nix-iso-docs";
     version = "1.0";
     src = ../.;
     dontBuild = true;
     installPhase = ''
       set -euo pipefail
-      dst="$out/share/ddubsos-docs"
+      dst="$out/share/nix-iso-docs"
       mkdir -p "$dst"
-      for f in README.md HOWTO.md Tools-Included.md; do
+      # Copy top-level docs if present
+      for f in README.md README.es.md HOWTO.md Tools-Included.md; do
         if [ -f "$src/$f" ]; then cp "$src/$f" "$dst/"; fi
       done
+      # Convert Markdown to HTML for offline viewing (README and README.es if present)
+      if [ -f "$src/README.md" ]; then
+        "${pkgs.pandoc}/bin/pandoc" -s -o "$dst/README.html" "$src/README.md"
+      fi
+      if [ -f "$src/README.es.md" ]; then
+        "${pkgs.pandoc}/bin/pandoc" -s -o "$dst/README.es.html" "$src/README.es.md"
+      fi
+      # Copy docs tree if present
       if [ -d "$src/docs" ]; then
         cp -r "$src/docs" "$dst/docs"
       fi
+      # Include scripts README if present
       if [ -f "$src/scripts/README.md" ]; then
         mkdir -p "$dst/scripts"
         cp "$src/scripts/README.md" "$dst/scripts/"
@@ -61,7 +71,7 @@ in
     in
     [
       recoveryScripts
-      ddubsosDocs
+      nixIsoDocs
 
       # Core CLI
       coreutils
@@ -128,6 +138,9 @@ in
       unzip
       pv
 
+      # Documentation generator/viewer
+      pandoc
+
       # ZFS userland (zpool, zfs) — align with kernel/module package
       # Use the configured boot.zfs.package to ensure compatibility
 
@@ -152,7 +165,57 @@ in
     ];
 
   # Expose docs on the live ISO for quick reference
-  environment.etc."ddubsos-docs".source = "${ddubsosDocs}/share/ddubsos-docs";
+  environment.etc."nix-iso-docs".source = "${nixIsoDocs}/share/nix-iso-docs";
+
+  # Desktop and launcher entries for documentation (offline HTML and online link)
+  # Desktop icons for new users (live user inherits from skel)
+  environment.etc."skel/Desktop/nix-iso-docs.desktop".text = ''
+    [Desktop Entry]
+    Type=Application
+    Name=nix-iso Documentation
+    Comment=Open the nix-iso documentation folder
+    Exec=xdg-open /etc/nix-iso-docs
+    Icon=folder-documents
+    Terminal=false
+    Categories=Documentation;Utility;
+  '';
+  environment.etc."skel/Desktop/nix-iso-readme-en.desktop".text = ''
+    [Desktop Entry]
+    Type=Application
+    Name=nix-iso README (EN)
+    Comment=Open the nix-iso README in your browser (offline HTML)
+    Exec=xdg-open /etc/nix-iso-docs/README.html
+    Icon=text-html
+    Terminal=false
+    Categories=Documentation;Utility;
+  '';
+  environment.etc."skel/Desktop/nix-iso-readme-es.desktop".text = ''
+    [Desktop Entry]
+    Type=Application
+    Name=nix-iso README (ES)
+    Comment=Abrir el README de nix-iso en el navegador (HTML sin conexión)
+    Exec=xdg-open /etc/nix-iso-docs/README.es.html
+    Icon=text-html
+    Terminal=false
+    Categories=Documentation;Utility;
+  '';
+  environment.etc."skel/Desktop/nix-iso-readme-online.desktop".text = ''
+    [Desktop Entry]
+    Type=Link
+    Name=nix-iso README (Online)
+    URL=https://gitlab.com/dwilliam62/nix-iso
+    Icon=web-browser
+  '';
+
+  # App grid entries (system-wide)
+  environment.etc."xdg/applications/nix-iso-docs.desktop".text =
+    config.environment.etc."skel/Desktop/nix-iso-docs.desktop".text;
+  environment.etc."xdg/applications/nix-iso-readme-en.desktop".text =
+    config.environment.etc."skel/Desktop/nix-iso-readme-en.desktop".text;
+  environment.etc."xdg/applications/nix-iso-readme-es.desktop".text =
+    config.environment.etc."skel/Desktop/nix-iso-readme-es.desktop".text;
+  environment.etc."xdg/applications/nix-iso-readme-online.desktop".text =
+    config.environment.etc."skel/Desktop/nix-iso-readme-online.desktop".text;
 
   # Provide a starter configuration at /etc/nixos/configuration.nix
   # so users can quickly edit and run nixos-install.

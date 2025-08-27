@@ -218,7 +218,7 @@ Included tools overview
 
 - See Tools-Included.md for the complete, up-to-date list of tools packaged into
   the live ISO.
-- Documentation is available on the live ISO under /etc/ddubsos-docs (README.md,
+- Documentation is available on the live ISO under /etc/nix-iso-docs (README.md,
   HOWTO.md, Tools-Included.md, docs/*).
 
 Documentation

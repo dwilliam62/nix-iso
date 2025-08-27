@@ -181,7 +181,7 @@ Resumen de herramientas incluidas
 
 - Consulta Tools-Included.es.md para la lista completa y actualizada de herramientas incluidas en
   el ISO en vivo.
-- La documentación está disponible en el ISO en vivo bajo /etc/ddubsos-docs (README.md,
+- La documentación está disponible en el ISO en vivo bajo /etc/nix-iso-docs (README.md,
   HOWTO.md, Tools-Included.md, docs/*).
 
 Documentación
