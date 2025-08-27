@@ -268,7 +268,7 @@ in
       *i*) ;; # interactive
       *) return ;; # not interactive
     esac
-    if [ -n "${XDG_CURRENT_DESKTOP:-}" ]; then
+    if [ -n "''${XDG_CURRENT_DESKTOP:-}" ]; then
       printf "\nTo access menu -- run nix-iso\n\n"
     fi
   '';
