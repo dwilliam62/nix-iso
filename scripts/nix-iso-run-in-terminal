@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Run the nix-iso TUI inside a terminal emulator, preferring the DE's terminal.
+# Falls back through several common terminals.
+
+NIX_ISO_BIN="/run/current-system/sw/bin/nix-iso"
+
+run_cmd() {
+  echo "$*"
+  exec "$@"
+}
+
+if command -v cosmic-term >/dev/null 2>&1; then
+  run_cmd cosmic-term -e "$NIX_ISO_BIN"
+fi
+
+if command -v gnome-terminal >/dev/null 2>&1; then
+  # Use a login shell to ensure PATH/env
+  run_cmd gnome-terminal -- bash -lc "$NIX_ISO_BIN"
+fi
+
+if command -v konsole >/dev/null 2>&1; then
+  run_cmd konsole -e "$NIX_ISO_BIN"
+fi
+
+if command -v xfce4-terminal >/dev/null 2>&1; then
+  run_cmd xfce4-terminal -e "$NIX_ISO_BIN"
+fi
+
+if command -v alacritty >/dev/null 2>&1; then
+  run_cmd alacritty -e "$NIX_ISO_BIN"
+fi
+
+if command -v footclient >/dev/null 2>&1; then
+  run_cmd footclient "$NIX_ISO_BIN"
+fi
+
+if command -v xterm >/dev/null 2>&1; then
+  run_cmd xterm -e "$NIX_ISO_BIN"
+fi
+
+# Last resort: try to run directly (may fail without a terminal)
+exec "$NIX_ISO_BIN"
+

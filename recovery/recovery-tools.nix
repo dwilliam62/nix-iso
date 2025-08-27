@@ -207,30 +207,31 @@ in
     Icon=web-browser
   '';
 
-  # TUI launcher on Desktop (generic; relies on DE honoring Terminal=true)
+  # TUI launcher on Desktop (generic)
   environment.etc."skel/Desktop/nix-iso-launcher.desktop".text = ''
     [Desktop Entry]
     Type=Application
     Name=NIXOS installer
     Comment=Launch the modular TUI installer menu
-    Exec=nix-iso
-    Terminal=true
+    Exec=/run/current-system/sw/bin/nix-iso-run-in-terminal
+    Terminal=false
     Icon=utilities-terminal
     Categories=System;Utility;
+    NotShowIn=COSMIC;
   '';
 
-  # COSMIC-specific launcher: explicitly open a terminal and run nix-iso
-  # Uses full path to nix-iso in the system profile to avoid PATH issues.
+  # COSMIC-specific launcher: explicitly open a terminal and run nix-iso via wrapper
   environment.etc."skel/Desktop/nix-iso-launcher-cosmic.desktop".text = ''
     [Desktop Entry]
     Type=Application
     Name=NIXOS installer
     Comment=Launch the modular TUI installer menu in COSMIC Terminal
     TryExec=cosmic-term
-    Exec=cosmic-term -e /run/current-system/sw/bin/nix-iso
+    Exec=/run/current-system/sw/bin/nix-iso-run-in-terminal
     Terminal=false
     Icon=utilities-terminal
     Categories=System;Utility;
+    OnlyShowIn=COSMIC;
   '';
 
   # App grid entries (system-wide)

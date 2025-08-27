@@ -11,7 +11,7 @@ All notable changes to this project will be documented in this file.
 - TUI: add modular terminal menu (scripts/nix-iso) with sections:
   - Install scripts (bcachefs marked "EXPERIMENTAL - Use at own risk"; mirror installers marked "Testing - not for production use")
   - Documentation and links (offline HTML and GitHub repo)
-- COSMIC ISO: add Desktop launcher for the TUI installer menu (nix-iso); add COSMIC-specific launcher that runs `cosmic-term -e /run/current-system/sw/bin/nix-iso` for reliable startup
+- COSMIC ISO: Desktop launcher now uses a wrapper that opens a terminal explicitly and runs nix-iso; deduplicate icons with OnlyShowIn/NotShowIn so only one shows on COSMIC
 - Minimal ISO: print login hint "To access menu -- run nix-iso" after auto-login
 ## [2025-08-27] ddubsos-iso
 - Docs UX: Add offline HTML rendering for README (EN/ES) using pandoc during ISO build
