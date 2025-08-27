@@ -140,6 +140,7 @@ in
 
       # Documentation generator/viewer
       pandoc
+      w3m
 
       # ZFS userland (zpool, zfs) — align with kernel/module package
       # Use the configured boot.zfs.package to ensure compatibility
