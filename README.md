@@ -159,6 +159,17 @@ nyx.chaotic.cx-1:HfnXSw4pj95iI/n17rIDy40agHj12WfF+Gqk6SonIT8=
 
 Using the installer scripts (on the live ISO or any NixOS live env)
 
+TUI installer menu
+
+- A simple terminal menu is available on the live ISO. To launch it, open a terminal and run:
+  ```
+  nix-iso
+  ```
+- Title: NIXOS installer; sections:
+  - Install scripts (with warnings shown for experimental/testing entries)
+  - Documentation and links (opens the offline docs at /etc/nix-iso-docs and the GitHub repo)
+- The same launcher may appear on the desktop as “NIXOS installer” on COSMIC/GNOME builds; if not visible, the CLI command above always works.
+
 - Available scripts in `~/nix-iso/scripts`:
   - install-btrfs.sh — Btrfs with subvolumes @, @home, @nix, @snapshots; zstd
     compression

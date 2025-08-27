@@ -122,6 +122,17 @@ nyx.chaotic.cx-1:HfnXSw4pj95iI/n17rIDy40agHj12WfF+Gqk6SonIT8=
 
 Uso de los scripts de instalación (en el ISO en vivo o cualquier entorno en vivo de NixOS)
 
+Menú TUI del instalador
+
+- Hay un menú simple en terminal disponible en el ISO en vivo. Para iniciarlo, abre una terminal y ejecuta:
+  ```
+  nix-iso
+  ```
+- Título: NIXOS installer; secciones:
+  - Scripts de instalación (con advertencias para entradas experimentales/de prueba)
+  - Documentación y enlaces (abre la documentación sin conexión en /etc/nix-iso-docs y el repositorio de GitHub)
+- El mismo lanzador puede aparecer en el escritorio como “NIXOS installer” en las compilaciones COSMIC/GNOME; si no es visible, el comando CLI anterior siempre funciona.
+
 - Scripts disponibles en `~/nix-iso/scripts`:
   - install-btrfs.sh — Btrfs con subvolúmenes @, @home, @nix, @snapshots; compresión
     zstd
