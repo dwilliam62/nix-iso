@@ -35,6 +35,12 @@
     google-chrome
   ] ++ lib.optionals (dingExt != null) [ dingExt ];
 
+  # Ensure XDG user directories exist and are configured (Desktop path used by DING)
+  xdg.userDirs = {
+    enable = true;
+    createDirectories = true;
+  };
+
   # Enable Desktop Icons NG and basic desktop icons via dconf (NixOS: programs.dconf)
   programs.dconf = {
     enable = true;
@@ -43,6 +49,7 @@
         settings = {
           "org/gnome/shell" = {
             enabled-extensions = [ "ding@rastersoft.com" ];
+            disable-user-extensions = false;
           };
           "org/gnome/shell/extensions/ding" = {
             show-home = true;
