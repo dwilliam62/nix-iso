@@ -217,6 +217,16 @@ in
   environment.etc."xdg/applications/nix-iso-readme-online.desktop".text =
     config.environment.etc."skel/Desktop/nix-iso-readme-online.desktop".text;
 
+  # Ensure the live user's Desktop has these icons (copy from skel at boot)
+  # This targets the standard live user 'nixos' provided by installation media.
+  systemd.tmpfiles.rules = [
+    "d /home/nixos/Desktop 0755 nixos users -"
+    "C /home/nixos/Desktop/nix-iso-docs.desktop 0644 nixos users - /etc/skel/Desktop/nix-iso-docs.desktop"
+    "C /home/nixos/Desktop/nix-iso-readme-en.desktop 0644 nixos users - /etc/skel/Desktop/nix-iso-readme-en.desktop"
+    "C /home/nixos/Desktop/nix-iso-readme-es.desktop 0644 nixos users - /etc/skel/Desktop/nix-iso-readme-es.desktop"
+    "C /home/nixos/Desktop/nix-iso-readme-online.desktop 0644 nixos users - /etc/skel/Desktop/nix-iso-readme-online.desktop"
+  ];
+
   # Provide a starter configuration at /etc/nixos/configuration.nix
   # so users can quickly edit and run nixos-install.
   environment.etc."nixos/configuration.nix".text = ''
