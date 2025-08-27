@@ -10,7 +10,8 @@ English | [Español](./README.es.md)
   <em>Screenshot: NixOS installation using XFS in the COSMIC Desktop GUI</em>
 </div>
 
-Custom NixOS install and recovery ISOs based on nixos-unstable, with a focus on
+
+### Custom NixOS install and recovery ISOs based on nixos-unstable, with a focus on
 modern filesystem support (Btrfs, ZFS, XFS, ext4, bcachefs) and a robust
 recovery toolset.
 

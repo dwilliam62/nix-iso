@@ -10,7 +10,8 @@
   <em>Captura: instalación de NixOS usando XFS en la interfaz gráfica COSMIC Desktop</em>
 </div>
 
-ISOs personalizadas de instalación y recuperación de NixOS basadas en nixos-unstable, con enfoque en soporte moderno de sistemas de archivos (Btrfs, ZFS, XFS, ext4, bcachefs) y un conjunto sólido de herramientas de recuperación.
+
+### ISOs personalizadas de instalación y recuperación de NixOS basadas en nixos-unstable, con enfoque en soporte moderno de sistemas de archivos (Btrfs, ZFS, XFS, ext4, bcachefs) y un conjunto sólido de herramientas de recuperación.
 
 Créditos
 
