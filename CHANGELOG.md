@@ -10,6 +10,7 @@ All notable changes to this project will be documented in this file.
 - TUI: add modular terminal menu (scripts/nix-iso) with sections:
   - Install scripts (bcachefs marked "EXPERIMENTAL - Use at own risk"; mirror installers marked "Testing - not for production use")
   - Documentation and links (offline HTML and GitHub repo)
+- COSMIC ISO: add Desktop launcher for the TUI installer menu (nix-iso)
 ## [2025-08-27] ddubsos-iso
 - Docs UX: Add offline HTML rendering for README (EN/ES) using pandoc during ISO build
   - Generate /etc/nix-iso-docs/README.html and README.es.html

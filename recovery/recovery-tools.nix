@@ -207,6 +207,18 @@ in
     Icon=web-browser
   '';
 
+  # TUI launcher on Desktop
+  environment.etc."skel/Desktop/nix-iso-launcher.desktop".text = ''
+    [Desktop Entry]
+    Type=Application
+    Name=NIXOS installer
+    Comment=Launch the modular TUI installer menu
+    Exec=nix-iso
+    Terminal=true
+    Icon=utilities-terminal
+    Categories=System;Utility;
+  '';
+
   # App grid entries (system-wide)
   environment.etc."xdg/applications/nix-iso-docs.desktop".text =
     config.environment.etc."skel/Desktop/nix-iso-docs.desktop".text;
@@ -216,16 +228,19 @@ in
     config.environment.etc."skel/Desktop/nix-iso-readme-es.desktop".text;
   environment.etc."xdg/applications/nix-iso-readme-online.desktop".text =
     config.environment.etc."skel/Desktop/nix-iso-readme-online.desktop".text;
+  environment.etc."xdg/applications/nix-iso-launcher.desktop".text =
+    config.environment.etc."skel/Desktop/nix-iso-launcher.desktop".text;
 
   # Ensure the live user's Desktop has these icons (copy from skel at boot)
   # This targets the standard live user 'nixos' provided by installation media.
   systemd.tmpfiles.rules = [
     "d /home/nixos/Desktop 0755 nixos users -"
-    # Make .desktop launchers executable so GNOME treats them as trusted/launchable
+    # Make .desktop launchers executable so GNOME/COSMIC treat them as launchable
     "C /home/nixos/Desktop/nix-iso-docs.desktop 0755 nixos users - /etc/skel/Desktop/nix-iso-docs.desktop"
     "C /home/nixos/Desktop/nix-iso-readme-en.desktop 0755 nixos users - /etc/skel/Desktop/nix-iso-readme-en.desktop"
     "C /home/nixos/Desktop/nix-iso-readme-es.desktop 0755 nixos users - /etc/skel/Desktop/nix-iso-readme-es.desktop"
     "C /home/nixos/Desktop/nix-iso-readme-online.desktop 0755 nixos users - /etc/skel/Desktop/nix-iso-readme-online.desktop"
+    "C /home/nixos/Desktop/nix-iso-launcher.desktop 0755 nixos users - /etc/skel/Desktop/nix-iso-launcher.desktop"
   ];
 
   # Provide a starter configuration at /etc/nixos/configuration.nix
