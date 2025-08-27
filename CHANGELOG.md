@@ -15,6 +15,7 @@ All notable changes to this project will be documented in this file.
   - nix-iso README (Online) links to GitLab project page
 - Rename docs path on live ISO from /etc/ddubsos-docs to /etc/nix-iso-docs
 - VM guest services: enable guest daemons; systemd starts them only inside VMs
+  - GNOME ISO: enable Desktop Icons NG (ding) so Desktop .desktop entries are visible by default
   - services.qemuGuest.enable = true
   - services.spice-vdagentd.enable = true (SPICE clipboard/display integration)
   - virtualisation.virtualbox.guest.enable = true

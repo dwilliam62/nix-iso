@@ -27,7 +27,20 @@
   environment.systemPackages = with pkgs; [
     gparted
     google-chrome
+    # Desktop Icons NG to show Desktop icons in GNOME
+    gnomeExtensions.desktop-icons-ng
   ];
+
+  # Enable Desktop Icons NG and basic desktop icons via dconf
+  dconf.settings = {
+    "org/gnome/shell" = {
+      enabled-extensions = [ "ding@rastersoft.com" ];
+    };
+    "org/gnome/shell/extensions/ding" = {
+      show-home = true;
+      show-trash = true;
+    };
+  };
 
   # Customize ISO filename to distinguish from standard NixOS ISOs
   image.fileName = lib.mkForce "nixos-ddubsos-gnome-${config.system.nixos.label}-${pkgs.stdenv.hostPlatform.system}.iso";
