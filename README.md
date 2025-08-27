@@ -2,6 +2,14 @@ English | [Español](./README.es.md)
 
 # ddubsos NixOS Install/Recovery ISOs
 
+---
+
+<div align="center">
+  <img src="img/nixos-install-cosmic-gui-1.png" alt="Screenshot: NixOS installation using XFS in the COSMIC Desktop GUI" width="80%" />
+  <br />
+  <em>Screenshot: NixOS installation using XFS in the COSMIC Desktop GUI</em>
+</div>
+
 Custom NixOS install and recovery ISOs based on nixos-unstable, with a focus on
 modern filesystem support (Btrfs, ZFS, XFS, ext4, bcachefs) and a robust
 recovery toolset.

@@ -11,6 +11,10 @@
 !*.md
 !*.json
 !*.sh
+!*.jpg
+!*.jpeg
+!*.png
+!*.gif
 
 # Don't ignore the README
 !README.md
