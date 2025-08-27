@@ -6,13 +6,13 @@
 
 <div align="center">
   <img src="img/nixos-install-cosmic-gui-1.png" alt="Captura: instalación de NixOS usando XFS en la interfaz COSMIC Desktop" width="80%" />
-  <br />
+  <br /><br>
   <em>Captura: instalación de NixOS usando XFS en la interfaz gráfica COSMIC Desktop</em>
 </div>
-
+<br><br><br>
 <div align="center">
   <img src="img/nixos-install-cosmic-gui-1.png" alt="Captura: instalación de NixOS usando XFS en la interfaz COSMIC Desktop" width="80%" />
-  <br />
+  <br /><br>
   <em>Captura: instalación de NixOS </em>
 </div>
 
