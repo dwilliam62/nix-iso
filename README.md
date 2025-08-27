@@ -6,13 +6,15 @@ English | [Español](./README.es.md)
 
 <div align="center">
   <img src="img/nixos-install-cosmic-gui-1.png" alt="Screenshot: NixOS installation using XFS in the COSMIC Desktop GUI" width="80%" />
-  <br />
+  <br /><br>
   <em>Screenshot: NixOS installation using XFS in the COSMIC Desktop GUI</em>
 </div>
 
+<br><br><br>
+
 <div align="center">
   <img src="img/nixos-install-cosmic-gui-2.png" alt="Screenshot: NixOS installation using XFS in the COSMIC Desktop GUI" width="80%" />
-  <br />
+  <br /><br>
   <em>Screenshot: NixOS installation menu </em>
 </div>
 
