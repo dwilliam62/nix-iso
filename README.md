@@ -18,6 +18,14 @@ English | [Español](./README.es.md)
   <em>Screenshot: NixOS installation menu </em>
 </div>
 
+<br><br><br>
+
+<div align="center">
+  <img src="img/nixos-install-cosmic-gui-3.png" alt="Screenshot: NixOS installation using XFS in the COSMIC Desktop GUI" width="80%" />
+  <br /><br>
+  <em>Screenshot: NixOS menu </em>
+</div>
+
 ### Custom NixOS install and recovery ISOs based on nixos-unstable, with a focus on
 
 modern filesystem support (Btrfs, ZFS, XFS, ext4, bcachefs) and a robust

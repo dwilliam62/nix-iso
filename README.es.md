@@ -11,9 +11,17 @@
 </div>
 <br><br><br>
 <div align="center">
-  <img src="img/nixos-install-cosmic-gui-1.png" alt="Captura: instalación de NixOS usando XFS en la interfaz COSMIC Desktop" width="80%" />
+  <img src="img/nixos-install-cosmic-gui-2.png" alt="Captura: instalación de NixOS usando XFS en la interfaz COSMIC Desktop" width="80%" />
   <br /><br>
   <em>Captura: instalación de NixOS </em>
+</div>
+
+<br><br><br>
+
+<div align="center">
+  <img src="img/nixos-install-cosmic-gui-3.png" alt="Captura: instalación de NixOS usando XFS en la interfaz COSMIC Desktop" width="80%" />
+  <br /><br>
+  <em>Captura: menu de NixOS </em>
 </div>
 
 ### ISOs personalizadas de instalación y recuperación de NixOS basadas en nixos-unstable, con enfoque en soporte moderno de sistemas de archivos (Btrfs, ZFS, XFS, ext4, bcachefs) y un conjunto sólido de herramientas de recuperación.
