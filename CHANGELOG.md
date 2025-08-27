@@ -3,7 +3,9 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
-
+- Fix: rename services.vmwareGuest to virtualisation.vmware.guest to address evaluation warning
+- GNOME ISO: replace Home Manager-style `dconf.settings` with NixOS `programs.dconf` to fix evaluation error
+- GNOME ISO: enable Desktop Icons NG (ding) and show Home/Trash icons; make extension package selection resilient across nixpkgs (desktop-icons-ng or ding)
 ## [2025-08-27] ddubsos-iso
 - Docs UX: Add offline HTML rendering for README (EN/ES) using pandoc during ISO build
   - Generate /etc/nix-iso-docs/README.html and README.es.html
@@ -18,8 +20,8 @@ All notable changes to this project will be documented in this file.
   - GNOME ISO: enable Desktop Icons NG (ding) so Desktop .desktop entries are visible by default
   - services.qemuGuest.enable = true
   - services.spice-vdagentd.enable = true (SPICE clipboard/display integration)
-  - virtualisation.virtualbox.guest.enable = true
-  - services.vmwareGuest.enable = true
+  - virtualisation.vmware.guest.enable = true
+  - VirtualBox guest skipped to avoid conflicting definition with installation ISO base module; can be enabled per-profile with mkForce if needed
   - Hyper-V skipped: option not available on current nixpkgs snapshot; will re-enable when present
 
 ## [2025-08-26] ddubsos-iso

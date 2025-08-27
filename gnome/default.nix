@@ -24,22 +24,33 @@
   networking.networkmanager.enable = true;
   hardware.bluetooth.enable = true; # enables support for Bluetooth
 
-  environment.systemPackages = with pkgs; [
+  # Include Desktop Icons NG extension; attribute name varies across nixpkgs snapshots.
+  # Prefer desktop-icons-ng; fall back to ding if needed.
+  environment.systemPackages = let
+    dingExt = if pkgs.gnomeExtensions ? desktop-icons-ng then pkgs.gnomeExtensions.desktop-icons-ng
+              else if pkgs.gnomeExtensions ? ding then pkgs.gnomeExtensions.ding
+              else null;
+  in with pkgs; [
     gparted
     google-chrome
-    # Desktop Icons NG to show Desktop icons in GNOME
-    gnomeExtensions.desktop-icons-ng
-  ];
+  ] ++ lib.optionals (dingExt != null) [ dingExt ];
 
-  # Enable Desktop Icons NG and basic desktop icons via dconf
-  dconf.settings = {
-    "org/gnome/shell" = {
-      enabled-extensions = [ "ding@rastersoft.com" ];
-    };
-    "org/gnome/shell/extensions/ding" = {
-      show-home = true;
-      show-trash = true;
-    };
+  # Enable Desktop Icons NG and basic desktop icons via dconf (NixOS: programs.dconf)
+  programs.dconf = {
+    enable = true;
+    profiles.user.databases = [
+      {
+        settings = {
+          "org/gnome/shell" = {
+            enabled-extensions = [ "ding@rastersoft.com" ];
+          };
+          "org/gnome/shell/extensions/ding" = {
+            show-home = true;
+            show-trash = true;
+          };
+        };
+      }
+    ];
   };
 
   # Customize ISO filename to distinguish from standard NixOS ISOs
