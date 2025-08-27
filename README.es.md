@@ -1,6 +1,6 @@
 [English](./README.md) | Español
 
-# ddubsos ISOs de instalación/recuperación de NixOS
+# nix-iso ISOs de instalación/recuperación de NixOS
 
 ---
 
