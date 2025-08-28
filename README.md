@@ -87,7 +87,7 @@ How to build the ISOs
 
 - Prereqs: enable flakes and accept flake config (see below for cache settings).
 - Clone:
-  - git clone https://github.com/dwilliam62/nix-iso.git
+  - git clone https://github.com/dwilliam62/nix-iso.git -b ddubsos-iso --depth=1 ~/nix-iso
   - cd nix-iso
   - Suggest running `nix flake update`
 
