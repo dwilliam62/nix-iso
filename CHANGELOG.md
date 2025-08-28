@@ -13,6 +13,20 @@ All notable changes to this project will be documented in this file.
   - Documentation and links (offline HTML and GitHub repo)
 - COSMIC ISO: Desktop launcher now uses a wrapper that opens a terminal explicitly and runs nix-iso; deduplicate icons with OnlyShowIn/NotShowIn so only one shows on COSMIC
 - Minimal ISO: print login hint "To access menu -- run nix-iso" after auto-login; also show this hint when opening a terminal in GNOME/COSMIC
+
+## [2025-08-28] ddubsos-iso
+- Docs: Add a comprehensive project guide consolidating overview, architecture, build/install flows, filesystem defaults, and TUI usage
+  - English: docs/project-guide.md
+  - Español: docs/project-guide.es.md
+  - Link both from README.md under Documentation and add language-switch links at the top of the guides
+- Docs: Add a deep-dive section covering scripts/install-*.sh behavior and guardrails for quick AI/human onboarding
+- Docs: Document profile-specific UX and docs packaging across ISO profiles
+  - Offline docs generated via pandoc to HTML and installed under /etc/nix-iso-docs
+  - Desktop/app menu entries to open docs and launch the installer TUI (nix-iso)
+  - Minimal ISO: console help banner prints "To access menu -- run nix-iso" after auto-login
+  - COSMIC ISO: COSMIC-specific launcher that opens a terminal and runs nix-iso
+  - GNOME ISO: launchers/icons configured but not functioning as expected as of 2025-08-28; users can run nix-iso from a terminal
+- README: Add links to the new project guides (EN/ES) in the Documentation section
 ## [2025-08-27] ddubsos-iso
 - Docs UX: Add offline HTML rendering for README (EN/ES) using pandoc during ISO build
   - Generate /etc/nix-iso-docs/README.html and README.es.html

@@ -253,6 +253,9 @@ Included tools overview
 
 Documentation
 
+- Project guide:
+  - English: [docs/project-guide.md](docs/project-guide.md)
+  - Español: [docs/project-guide.es.md](docs/project-guide.es.md)
 - Filesystem overview:
   [docs/filesystems-overview.md](docs/filesystems-overview.md)
 - Defaults and parameters:
