@@ -26,14 +26,22 @@
 
   # Include Desktop Icons NG extension; attribute name varies across nixpkgs snapshots.
   # Prefer desktop-icons-ng; fall back to ding if needed.
-  environment.systemPackages = let
-    dingExt = if pkgs.gnomeExtensions ? desktop-icons-ng then pkgs.gnomeExtensions.desktop-icons-ng
-              else if pkgs.gnomeExtensions ? ding then pkgs.gnomeExtensions.ding
-              else null;
-  in with pkgs; [
-    gparted
-    google-chrome
-  ] ++ lib.optionals (dingExt != null) [ dingExt ];
+  environment.systemPackages =
+    let
+      dingExt =
+        if pkgs.gnomeExtensions ? desktop-icons-ng then
+          pkgs.gnomeExtensions.desktop-icons-ng
+        else if pkgs.gnomeExtensions ? ding then
+          pkgs.gnomeExtensions.ding
+        else
+          null;
+    in
+    with pkgs;
+    [
+      gparted
+      google-chrome
+    ]
+    ++ lib.optionals (dingExt != null) [ dingExt ];
 
   # Enable Desktop Icons NG and basic desktop icons via dconf (NixOS: programs.dconf)
   programs.dconf = {

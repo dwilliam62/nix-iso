@@ -1,5 +1,11 @@
 # Recovery/Install ISO profile that reuses the shared recovery toolset
-{ config, lib, pkgs, inputs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  inputs,
+  ...
+}:
 {
   imports = [
     # Base minimal installer and channel so /etc/nixos exists and nixos-install works

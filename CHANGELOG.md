@@ -3,6 +3,14 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
+- Breaking: Remove ZFS and bcachefs features from ISOs and tools
+  - Drop ZFS and bcachefs from boot.supportedFilesystems; stop packaging bcachefs-tools and ZFS userland in recovery tools
+  - Remove ZFS/bcachefs installers from the TUI menu and from packaged scripts on the ISO
+  - Remove bcachefs overlay wiring
+- Kernel: switch to nixpkgs' latest kernel (boot.kernelPackages = linuxPackages_latest) instead of CachyOS
+- TUI UX: make "Install scripts" the first menu section and "Documentation and links" second
+- Dev UX: make nix fmt format only tracked .nix files to avoid hangs on large/untracked trees
+- Flake inputs: update to latest with `nix flake update`
 - Fix: rename services.vmwareGuest to virtualisation.vmware.guest to address evaluation warning
 - GNOME ISO: replace Home Manager-style `dconf.settings` with NixOS `programs.dconf` to fix evaluation error
 - GNOME ISO: enable Desktop Icons NG (ding) and show Home/Trash icons; make extension package selection resilient across nixpkgs (desktop-icons-ng or ding)

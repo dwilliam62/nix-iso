@@ -20,28 +20,29 @@
     "flakes"
   ]; # enable nix command and flakes
 
+  # Keep only the Python test workarounds; drop bcachefs overlay
   nixpkgs.overlays = [
-    (final: prev: {
-      bcachefs-tools = inputs.bcachefs-tools.packages.${pkgs.system}.bcachefs-tools;
-    })
     # Work around upstream breakage: pygls tests fail with lsprotocol API mismatch on python3.13
     (final: prev: {
-      python3Packages = prev.python3Packages.overrideScope (pyFinal: pyPrev: {
-        pygls = pyPrev.pygls.overrideAttrs (old: {
-          doCheck = false;               # skip pytest phase
-          pytestCheckPhase = ''true'';   # no-op safeguard
-        });
-        i3ipc = pyPrev.i3ipc.overrideAttrs (old: {
-          doCheck = false;               # async tests failing under pytest/python 3.13
-          pytestCheckPhase = ''true'';   # no-op safeguard
-        });
-      });
+      python3Packages = prev.python3Packages.overrideScope (
+        pyFinal: pyPrev: {
+          pygls = pyPrev.pygls.overrideAttrs (old: {
+            doCheck = false; # skip pytest phase
+            pytestCheckPhase = ''true''; # no-op safeguard
+          });
+          i3ipc = pyPrev.i3ipc.overrideAttrs (old: {
+            doCheck = false; # async tests failing under pytest/python 3.13
+            pytestCheckPhase = ''true''; # no-op safeguard
+          });
+        }
+      );
     })
   ];
 
-  boot.kernelPackages = pkgs.linuxPackages_cachyos;
+  # Use latest kernel from Nixpkgs (no CachyOS)
+  boot.kernelPackages = pkgs.linuxPackages_latest;
 
-  boot.zfs.package = lib.mkOverride 99 pkgs.zfs_cachyos;
+  # Remove ZFS/bcachefs special handling; keep common filesystems only
   boot.supportedFilesystems = [
     "btrfs"
     "vfat"
@@ -49,9 +50,7 @@
     "xfs"
     "ntfs"
     "cifs"
-    "bcachefs"
     "ext4"
-    "zfs"
   ];
 
   environment.systemPackages = with pkgs; [

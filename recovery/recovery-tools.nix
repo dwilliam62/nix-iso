@@ -64,6 +64,8 @@ in
         installPhase = ''
           mkdir -p "$out/bin"
           cp -r "$src"/* "$out/bin/" || true
+          # Remove unsupported installers (ZFS, bcachefs)
+          rm -f "$out/bin/install-bcachefs.sh" "$out/bin/install-zfs.sh" "$out/bin/install-zfs-boot-mirror.sh" || true
           chmod -R +x "$out/bin" || true
         '';
       };
@@ -115,7 +117,6 @@ in
       btrfs-progs
       e2fsprogs
       xfsprogs
-      bcachefs-tools
       ntfs3g
       exfatprogs
       dosfstools
@@ -142,11 +143,7 @@ in
       pandoc
       w3m
 
-      # ZFS userland (zpool, zfs) — align with kernel/module package
-      # Use the configured boot.zfs.package to ensure compatibility
-
     ]
-    ++ [ config.boot.zfs.package ]
     # Btrfs snapshot/backup tooling (CLI)
     ++ [
       snapper

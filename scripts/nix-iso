@@ -19,6 +19,24 @@ if [[ -d "$MODULES_DIR" ]]; then
   done
 fi
 
+# Ensure menu order: Install first, Documentation second (if present)
+if declare -p SECTIONS_ORDER >/dev/null 2>&1; then
+  declare -A _seen=()
+  _new_order=()
+  for want in installers docs; do
+    for s in "${SECTIONS_ORDER[@]}"; do
+      if [[ "$s" == "$want" && -z "${_seen[$s]:-}" ]]; then
+        _new_order+=("$s"); _seen[$s]=1; break
+      fi
+    done
+  done
+  for s in "${SECTIONS_ORDER[@]}"; do
+    if [[ -z "${_seen[$s]:-}" ]]; then _new_order+=("$s"); _seen[$s]=1; fi
+  done
+  SECTIONS_ORDER=("${_new_order[@]}")
+  unset _seen _new_order
+fi
+
 main_menu() {
   while true; do
     clear
