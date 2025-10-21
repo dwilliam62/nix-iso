@@ -56,6 +56,15 @@
         ];
         inherit specialArgs;
       };
+
+      ## RECOVERY ISO ##
+      nixosConfigurations.nixos-recovery = nixpkgs.lib.nixosSystem {
+        inherit system;
+        modules = [
+          ./recovery
+        ];
+        inherit specialArgs;
+      };
     };
 
   # Allows the user to use our cache when using `nix run <thisFlake>`.

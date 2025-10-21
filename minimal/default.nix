@@ -14,7 +14,12 @@
   imports = [
     "${inputs.nixpkgs}/nixos/modules/installer/cd-dvd/installation-cd-minimal.nix"
     ../common.nix
+    ../recovery/recovery-tools.nix
   ];
 
   networking.hostName = "nixos-minimal"; # set live session hostname
+
+  # Customize ISO filename to distinguish from standard NixOS ISOs
+  image.fileName = lib.mkForce "nixos-ddubsos-minimal-${config.system.nixos.label}-${pkgs.stdenv.hostPlatform.system}.iso";
+  isoImage.isoName = lib.mkForce "nixos-ddubsos-minimal-${config.system.nixos.label}-${pkgs.stdenv.hostPlatform.system}.iso";
 }

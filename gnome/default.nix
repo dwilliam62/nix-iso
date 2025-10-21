@@ -15,6 +15,7 @@
     "${inputs.nixpkgs}/nixos/modules/installer/cd-dvd/installation-cd-graphical-gnome.nix"
     "${inputs.nixpkgs}/nixos/modules/installer/cd-dvd/channel.nix"
     ../common.nix
+    ../recovery/recovery-tools.nix
   ];
 
   networking.hostName = "nixos-gnome"; # set live session hostname
@@ -27,4 +28,8 @@
     gparted
     google-chrome
   ];
+
+  # Customize ISO filename to distinguish from standard NixOS ISOs
+  image.fileName = lib.mkForce "nixos-ddubsos-gnome-${config.system.nixos.label}-${pkgs.stdenv.hostPlatform.system}.iso";
+  isoImage.isoName = lib.mkForce "nixos-ddubsos-gnome-${config.system.nixos.label}-${pkgs.stdenv.hostPlatform.system}.iso";
 }

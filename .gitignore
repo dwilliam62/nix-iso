@@ -8,6 +8,9 @@
 !*.nix
 !*.yml
 !*.lock
+!*.md
+!*.json
+!*.sh
 
 # Don't ignore the README
 !README.md
@@ -15,6 +18,10 @@
 # Don't ignore LICENSE and github actions
 !LICENSE
 !.github/workflows
+
+# Allow docs and scripts directories (track all files there)
+!docs/**
+!scripts/**
 
 # Ignore results of the build
 result

@@ -1,11 +1,12 @@
 # This module defines a NixOS installation CD that contains Cosmic.
 
-{ lib, pkgs, ... }:
+{ config, lib, pkgs, ... }:
 
 {
   imports = [
     ./cosmic.nix
     ../common.nix
+    ../recovery/recovery-tools.nix
   ];
 
   networking.hostName = "nixos-cosmic"; # set live session hostname
@@ -18,4 +19,8 @@
     gparted
     google-chrome
   ];
+
+  # Customize ISO filename to distinguish from standard NixOS ISOs
+  image.fileName = lib.mkForce "nixos-ddubsos-cosmic-${config.system.nixos.label}-${pkgs.stdenv.hostPlatform.system}.iso";
+  isoImage.isoName = lib.mkForce "nixos-ddubsos-cosmic-${config.system.nixos.label}-${pkgs.stdenv.hostPlatform.system}.iso";
 }
