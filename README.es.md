@@ -30,7 +30,7 @@ Project: https://github.com/dwilliam62/nix-iso
   <em>Captura: menu de NixOS </em>
 </div>
 
-### ISOs personalizadas de instalación y recuperación de NixOS basadas en nixos-unstable, con enfoque en soporte moderno de sistemas de archivos (Btrfs, ZFS, XFS, ext4, bcachefs) y un conjunto sólido de herramientas de recuperación.
+### ISOs personalizadas de instalación y recuperación de NixOS basadas en nixos-unstable, con enfoque en soporte moderno de sistemas de archivos (BTRFS, XFS, ext4 ) y un conjunto sólido de herramientas de recuperación.
 
 Créditos
 
@@ -49,11 +49,9 @@ Qué proporciona este proyecto
   - COSMIC (nixos-cosmic, experimental)
   - Recovery (nixos-recovery)
 - Scripts de instalación para NixOS unstable con soporte para:
-  - ZFS
   - Btrfs
   - XFS
   - EXT4
-  - bcachefs
 - La documentación de los scripts de instalación del SO está más abajo
 - Hay enlaces dedicados para cada uno de los scripts a continuación
 
@@ -66,12 +64,9 @@ entorno de escritorio después de la instalación inicial.
   soporte más amplio de hardware/sistemas de archivos.
 - Conjunto completo de herramientas de sistemas de archivos para instalaciones y
   rescate:
-  - Btrfs: btrfs-progs (subvolúmenes @, @home, @nix, @snapshots)
+  - BTRFS: btrfs-progs (subvolúmenes @, @home, @nix, @snapshots)
   - ext4: e2fsprogs
   - XFS: xfsprogs
-  - bcachefs: bcachefs-tools (mkfs con soporte de compresión zstd)
-  - ZFS: userland (zpool, zfs) tomado de config.boot.zfs.package para
-    compatibilidad con el kernel
   - NFS/SMB: nfs-utils, cifs-utils
   - Además: ntfs3g, exfatprogs, dosfstools
 - Recuperación/imagen y diagnóstico: ddrescue, testdisk, smartmontools,
@@ -91,7 +86,7 @@ Cómo construir las ISOs
 - Prerrequisitos: habilita flakes y acepta la configuración de la flake (ver
   abajo la configuración de caché).
 - Clonar:
-  - git clone https://github.com/dwilliam62/nix-iso.git -b ddubsos-iso --depth=1 ~/nix-iso
+  - git clone https://github.com/dwilliam62/nix-iso.git --depth=1 ~/nix-iso
   - cd nix-iso
   - Se sugiere ejecutar `nix flake update`
 
@@ -99,6 +94,7 @@ Preferido (script auxiliar)
 
 - Usa el helper para evitar rutas de atributos largas. También establece por
   defecto NIXPKGS_ALLOW_BROKEN=1 para coincidir con el comportamiento histórico.
+
   ```
   # ISO mínima
   ./scripts/build-iso.sh minimal
@@ -112,6 +108,7 @@ Preferido (script auxiliar)
   # ISO de recuperación
   ./scripts/build-iso.sh nixos-recovery
   ```
+
 - El script acepta alias amigables y errores comunes de tipeo (ver cabecera de
   scripts/build-iso.sh para detalles).
 - Resultado: la imagen ISO estará en ./result/iso/
@@ -138,15 +135,12 @@ Cachés binarias (muy recomendado)
 NixOS (recomendado) nix.settings = { experimental-features = [ "nix-command"
 "flakes" ]; accept-flake-config = true; substituters = [
 "https://cache.nixos.org" "https://nix-community.cachix.org"
-"https://nyx.chaotic.cx/" ]; trusted-public-keys = [
 "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
-"nyx.chaotic.cx-1:HfnXSw4pj95iI/n17rIDy40agHj12WfF+Gqk6SonIT8=" ]; };
 
 No NixOS (demonio multiusuario) accept-flake-config = true substituters =
 https://cache.nixos.org https://nix-community.cachix.org https://nyx.chaotic.cx/
 trusted-public-keys =
 nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs=
-nyx.chaotic.cx-1:HfnXSw4pj95iI/n17rIDy40agHj12WfF+Gqk6SonIT8=
 
 Uso de los scripts de instalación (en el ISO en vivo o cualquier entorno en vivo
 de NixOS)
@@ -172,28 +166,24 @@ Menú TUI del instalador
     compresión zstd
   - install-ext4.sh — instalador para ext4 (habilita fstrim en la configuración)
   - install-xfs.sh — instalador para XFS (habilita fstrim en la configuración)
-  - install-zfs.sh — ZFS con valores razonables por defecto; puntos de montaje
     legacy; genera networking.hostId
+  - > Los siguientes scripts deben considerarse EXPERIMENTALES. Actualmente están
+    > en desarrollo (ago 2025). Ninguno debe usarse con fines de producción de
+    > ningún tipo. ¡Has sido advertido!
   -
-  > Los siguientes scripts deben considerarse EXPERIMENTALES. Actualmente están
-  > en desarrollo (ago 2025). Ninguno debe usarse con fines de producción de
-  > ningún tipo. ¡Has sido advertido!
-  -
-  - install-bcachefs.sh — bcachefs con --compression=zstd
-  - install-zfs-boot-mirror.sh — Espejado ZFS en la unidad de arranque
-  - install-btrfs-boot-mirror.sh — Espejado Btrfs en la unidad de arranque
+  - install-btrfs-boot-mirror.sh — Espejado BTRFS en la unidad de arranque
 
 - Ejecuta como root; los scripts se autoelevan vía sudo cuando es posible:
   ```
   sudo ./scripts/install-btrfs.sh
-  # o install-ext4.sh, install-xfs.sh, install-bcachefs.sh, install-zfs.sh
+  # o install-ext4.sh, install-xfs.sh
   ```
 
 Instaladores con espejo (experimentales; úsalo bajo tu propio riesgo)
 
 - Scripts: scripts/install-zfs-boot-mirror.sh y
   scripts/install-btrfs-boot-mirror.sh
-- Propósito: configurar una raíz en espejo (ZFS/Btrfs) y dos particiones del
+- Propósito: configurar una raíz en espejo (BTRFS) y dos particiones del
   sistema EFI (/boot y /boot2). En nixpkgs más recientes, systemd-boot puede
   replicar automáticamente el gestor de arranque a /boot2.
 - Compatibilidad:
@@ -202,7 +192,7 @@ Instaladores con espejo (experimentales; úsalo bajo tu propio riesgo)
     presencia y la habilitan cuando está disponible.
   - En snapshots antiguos de nixpkgs que no proporcionan esta opción, la
     instalación sigue funcionando; solo se omite la sincronización automática de
-    /boot -> /boot2. Los espejos de almacenamiento ZFS/Btrfs no se ven
+    /boot -> /boot2. Los espejos de almacenamiento BTRFS no se ven
     afectados.
   - Para asegurar las funciones actuales en el ISO en vivo, actualiza el
     flake.lock de este repositorio (nix flake update) y reconstruye el ISO.
@@ -217,7 +207,6 @@ Notas sobre valores predeterminados
 - Particionado: GPT con una partición del sistema EFI (FAT32) de 1 GiB + el
   resto para el sistema de archivos elegido.
 - Gestor de arranque: systemd-boot en UEFI.
-- zswap: habilitado vía kernelParams (zstd, z3fold) para amplia compatibilidad.
 - Usuarios: los scripts piden un usuario y cifran la contraseña con openssl -6
   si está disponible.
 - Configuración generada: incluye un conjunto razonable de herramientas y
@@ -228,7 +217,7 @@ Resumen de herramientas incluidas
 - Consulta Tools-Included.es.md para la lista completa y actualizada de
   herramientas incluidas en el ISO en vivo.
 - La documentación está disponible en el ISO en vivo bajo /etc/nix-iso-docs
-  (README.md, HOWTO.md, Tools-Included.md, docs/*).
+  (README.md, HOWTO.md, Tools-Included.md, docs/\*).
 
 Documentación
 
@@ -239,15 +228,10 @@ Documentación
 - Dependencias de paquetes:
   [docs/package-dependencies.es.md](docs/package-dependencies.es.md)
 - Guías rápidas (Quickstarts):
-  - ZFS (disco único): [docs/quickstart-zfs.es.md](docs/quickstart-zfs.es.md)
-  - ZFS (en espejo):
-    [docs/quickstart-zfs-mirror.es.md](docs/quickstart-zfs-mirror.es.md)
   - Btrfs (disco único):
     [docs/quickstart-btrfs.es.md](docs/quickstart-btrfs.es.md)
   - Btrfs (en espejo):
     [docs/quickstart-btrfs-mirror.es.md](docs/quickstart-btrfs-mirror.es.md)
-  - bcachefs (experimental):
-    [docs/quickstart-bcachefs.es.md](docs/quickstart-bcachefs.es.md)
 - Playbook no interactivo para Btrfs:
   [docs/nixos-btrfs-install.es.md](docs/nixos-btrfs-install.es.md)
 

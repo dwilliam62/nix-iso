@@ -28,8 +28,7 @@ English | [Español](./README.es.md)
 
 ### Custom NixOS install and recovery ISOs based on nixos-unstable, with a focus on
 
-modern filesystem support (Btrfs, ZFS, XFS, ext4, bcachefs) and a robust
-recovery toolset.
+modern filesystem support (Btrfs, XFS, ext4 ) and a robust recovery toolset.
 
 Credits
 
@@ -47,11 +46,9 @@ What this project provides
 - COSMIC (nixos-cosmic, experimental)
 - Recovery (nixos-recovery)
 - NixOS UNSTABlE install scripts supporting
-  - ZFS
   - BTRFS
   - XFS
   - EXT4
-  - bcachefs
 - Documentation for the OS install scripts is below
 - There are dedicated links for each of the scripts below
 
@@ -60,15 +57,10 @@ user interface. The installers do NOT install GNOME or COSMIC onto the target
 system; they install a base NixOS. You can add a desktop environment after the
 initial install.
 
-- Modern kernel and ZFS package selection via chaotic nyx for broader
-  hardware/filesystem support.
 - Full filesystem tooling for installs and rescue:
   - Btrfs: btrfs-progs (subvolumes @, @home, @nix, @snapshots)
   - ext4: e2fsprogs
   - XFS: xfsprogs
-  - bcachefs: bcachefs-tools (mkfs with zstd compression support)
-  - ZFS: userland (zpool, zfs) sourced from config.boot.zfs.package for kernel
-    compatibility
   - NFS/SMB: nfs-utils, cifs-utils
   - Plus: ntfs3g, exfatprogs, dosfstools
 - Recovery/imaging and diagnostics: ddrescue, testdisk, smartmontools, nvme-cli,
@@ -87,7 +79,7 @@ How to build the ISOs
 
 - Prereqs: enable flakes and accept flake config (see below for cache settings).
 - Clone:
-  - git clone https://github.com/dwilliam62/nix-iso.git -b ddubsos-iso --depth=1 ~/nix-iso
+  - git clone https://github.com/dwilliam62/nix-iso.git --depth=1 ~/nix-iso
   - cd nix-iso
   - Suggest running `nix flake update`
 
@@ -95,6 +87,7 @@ Preferred (helper script)
 
 - Use the helper to avoid long attribute paths. It also defaults
   NIXPKGS_ALLOW_BROKEN=1 to match historical behavior.
+
   ```
   # Minimal ISO
   ./scripts/build-iso.sh minimal
@@ -108,6 +101,7 @@ Preferred (helper script)
   # Recovery ISO
   ./scripts/build-iso.sh nixos-recovery
   ```
+
 - The script accepts friendly aliases and common typos (see scripts/build-iso.sh
   header for details).
 - Result: the ISO image will be in ./result/iso/
@@ -126,11 +120,6 @@ Advanced/manual build
   env NIXPKGS_ALLOW_BROKEN=1 nix build .#nixosConfigurations.nixos-recovery.config.system.build.isoImage --impure
   ```
 
-Binary caches (strongly recommended)
-
-- To avoid building the kernel and ZFS from source, configure caches on the
-  build host:
-
 What gets installed by the scripts
 
 - Base system only: a minimal NixOS with a generated
@@ -140,18 +129,12 @@ What gets installed by the scripts
   systemd-boot.mirroredBoots to replicate the bootloader to /boot2.
 - Filesystems and layout: installers create opinionated layouts per filesystem
   for reliable operation and clean snapshots:
-  - ZFS: rpool/root (container) + rpool/root/nixos → /; datasets for /home, /nix
-    (atime=off), and split /var (log/cache/tmp/lib). Legacy mountpoints are used
-    for ZFS datasets. ZFS hostId is generated for initrd import.
-  - Btrfs: subvolumes @ → /, @home → /home, @nix → /nix, @snapshots →
+  - BTRFS: subvolumes @ → /, @home → /home, @nix → /nix, @snapshots →
     /.snapshots. Mirrored variant uses RAID1 (-m raid1 -d raid1).
-  - bcachefs (experimental): subvolumes @ → /, @home → /home, @nix → /nix, and
-    split /var into @var_log, @var_cache, @var_tmp, @var_lib.
 - Services and defaults:
   - NetworkManager enabled; OpenSSH enabled; sudo for wheel with password.
-  - zswap enabled via kernelModules + kernelParams (z3fold + zstd).
-  - fstrim service enabled (ext4/XFS/bcachefs); ZFS autotrim is set at pool
-    creation.
+  - zswap enabled via kernelModules.
+  - fstrim service enabled (ext4/XFS)
 - Nix settings:
   - nixpkgs.config.allowUnfree = true
   - nix.settings.experimental-features = [ "nix-command" "flakes" ] (flakes
@@ -163,15 +146,12 @@ What gets installed by the scripts
 NixOS (recommended) nix.settings = { experimental-features = [ "nix-command"
 "flakes" ]; accept-flake-config = true; substituters = [
 "https://cache.nixos.org" "https://nix-community.cachix.org"
-"https://nyx.chaotic.cx/" ]; trusted-public-keys = [
 "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
-"nyx.chaotic.cx-1:HfnXSw4pj95iI/n17rIDy40agHj12WfF+Gqk6SonIT8=" ]; };
 
 Non-NixOS (multi-user daemon) accept-flake-config = true substituters =
 https://cache.nixos.org https://nix-community.cachix.org https://nyx.chaotic.cx/
 trusted-public-keys =
 nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs=
-nyx.chaotic.cx-1:HfnXSw4pj95iI/n17rIDy40agHj12WfF+Gqk6SonIT8=
 
 Using the installer scripts (on the live ISO or any NixOS live env)
 
@@ -190,19 +170,14 @@ TUI installer menu
   COSMIC/GNOME builds; if not visible, the CLI command above always works.
 
 - Available scripts in `~/nix-iso/scripts`:
-  - install-btrfs.sh — Btrfs with subvolumes @, @home, @nix, @snapshots; zstd
-    compression
+  - install-btrfs.sh
+    — Btrfs with subvolumes @, @home, @nix, @snapshots; zstd compression
   - install-ext4.sh — ext4 installer (enable fstrim in config)
   - install-xfs.sh — XFS installer (enable fstrim in config)
-  - install-zfs.sh — ZFS with sensible defaults; legacy mountpoints; generates
-    networking.hostId
+  - > The following scripts should be considered EXPERMIMENTAL They are currently
+    > a work-in-progress (Aug 2025) None should be used for production purposes of
+    > any kind. _You have been warned!_
   -
-  > The following scripts should be considered EXPERMIMENTAL They are currently
-  > a work-in-progress (Aug 2025) None should be used for production purposes of
-  > any kind. _You have been warned!_
-  -
-  - install-bcachefs.sh — bcachefs with --compression=zstd
-  - install-zfs-boot-mirror.sh — ZFS mirroring on boot drive
   - install-btrfs-boot-mirror.sh — Btrfs mirroring on boot drive
 
 - Run as root; the scripts will self-elevate via sudo when possible:
@@ -213,9 +188,9 @@ TUI installer menu
 
 Mirror installers (experimental; use at your own risk)
 
-- Scripts: scripts/install-zfs-boot-mirror.sh and
+- Scripts:
   scripts/install-btrfs-boot-mirror.sh
-- Purpose: set up a mirrored root (ZFS/Btrfs) and two EFI System Partitions
+- Purpose: set up a mirrored root (BTRFS) and two EFI System Partitions
   (/boot and /boot2). On newer nixpkgs, systemd-boot can automatically replicate
   the bootloader to /boot2.
 - Compatibility:
@@ -223,7 +198,7 @@ Mirror installers (experimental; use at your own risk)
     boot.loader.systemd-boot.mirroredBoots. The installers detect its presence
     and enable it when available.
   - On older nixpkgs snapshots that don’t provide this option, installs still
-    succeed; only the auto-sync of /boot -> /boot2 is skipped. The ZFS/Btrfs
+    succeed; only the auto-sync of /boot -> /boot2 is skipped. The BTRFS
     storage mirrors are unaffected.
   - To ensure current features on the live ISO, update this repo’s flake.lock
     (nix flake update) and rebuild the ISO.
@@ -249,7 +224,7 @@ Included tools overview
 - See Tools-Included.md for the complete, up-to-date list of tools packaged into
   the live ISO.
 - Documentation is available on the live ISO under /etc/nix-iso-docs (README.md,
-  HOWTO.md, Tools-Included.md, docs/*).
+  HOWTO.md, Tools-Included.md, docs/\*).
 
 Documentation
 
@@ -263,14 +238,10 @@ Documentation
 - Package dependencies:
   [docs/package-dependencies.md](docs/package-dependencies.md)
 - Quickstarts:
-  - ZFS (single disk): [docs/quickstart-zfs.md](docs/quickstart-zfs.md)
-  - ZFS (mirrored):
-    [docs/quickstart-zfs-mirror.md](docs/quickstart-zfs-mirror.md)
+  [docs/quickstart-zfs-mirror.md](docs/quickstart-zfs-mirror.md)
   - Btrfs (single disk): [docs/quickstart-btrfs.md](docs/quickstart-btrfs.md)
   - Btrfs (mirrored):
     [docs/quickstart-btrfs-mirror.md](docs/quickstart-btrfs-mirror.md)
-  - bcachefs (experimental):
-    [docs/quickstart-bcachefs.md](docs/quickstart-bcachefs.md)
 - Btrfs non-interactive playbook:
   [docs/nixos-btrfs-install.md](docs/nixos-btrfs-install.md)
 
