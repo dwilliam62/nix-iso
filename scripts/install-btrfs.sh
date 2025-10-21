@@ -19,10 +19,32 @@ if [ "${EUID:-$(id -u)}" -ne 0 ]; then
   fi
 fi
 
+# Ensure common sbin locations are in PATH (parted, mkfs, lsblk may live in sbin)
+if ! printf %s "$PATH" | grep -q "/usr/sbin"; then PATH="/usr/sbin:$PATH"; fi
+if ! printf %s "$PATH" | grep -q "/sbin"; then PATH="/sbin:$PATH"; fi
+if [ -d /usr/local/sbin ] && ! printf %s "$PATH" | grep -q "/usr/local/sbin"; then PATH="/usr/local/sbin:$PATH"; fi
+if [ -d /run/current-system/sw/bin ] && ! printf %s "$PATH" | grep -q "/run/current-system/sw/bin"; then PATH="/run/current-system/sw/bin:$PATH"; fi
+export PATH
+
 require() { command -v "$1" >/dev/null 2>&1 || { echo "Missing dependency: $1" >&2; exit 1; }; }
-for dep in lsblk parted mkfs.fat mkfs.btrfs btrfs mount umount sed awk tee nixos-generate-config nixos-install; do
+for dep in lsblk parted mkfs.fat mkfs.btrfs btrfs mount umount sed awk tee nixos-generate-config nixos-install wipefs; do
   require "$dep"
 done
+
+# Environment diagnostics and guardrails
+if command -v systemd-detect-virt >/dev/null 2>&1 && systemd-detect-virt --container --quiet; then
+  echo "WARNING: Running inside a container. Block device access or efivars may not work." >&2
+fi
+if [ ! -d /sys/firmware/efi/efivars ]; then
+  echo "NOTE: UEFI efivars not available; NVRAM enrollment may be skipped by systemd-boot." >&2
+fi
+# Refuse if any btrfs filesystems are mounted; show what was detected
+if awk '$3=="btrfs"{found=1; exit} END{exit !found}' /proc/self/mounts; then
+  echo "ERROR: One or more btrfs filesystems are currently mounted:" >&2
+  awk '$3=="btrfs"{printf "  - %s on %s\n", $1, $2}' /proc/self/mounts >&2 || true
+  echo "Please unmount them before running this installer." >&2
+  exit 1
+fi
 
 # Defaults
 TIMEZONE=${TIMEZONE:-America/New_York}
@@ -62,6 +84,13 @@ if command -v openssl >/dev/null 2>&1; then
   done
 else
   echo "Warning: openssl not found; user '$USERNAME' will be created without a password. You can set it after first boot." >&2
+fi
+
+# Prepare Nix line for initialHashedPassword with quotes preserved
+HASH_LINE=""
+if [ -n "${USER_HASH}" ]; then
+  ESC_HASH=${USER_HASH//\"/\\\"}
+  HASH_LINE="    initialHashedPassword = \"${ESC_HASH}\";"
 fi
 
 # Disk selection
@@ -111,10 +140,13 @@ read -r -p "Type 'INSTALL' to proceed: " confirm
 [ "$confirm" = "INSTALL" ] || { echo "Aborted"; exit 1; }
 
 # Ensure not mounted
-mount | grep -E "^$DISK" && { echo "Device appears mounted. Unmount first." >&2; exit 1; } || true
+if mount | grep -Eq "^$DISK"; then
+  echo "Device appears mounted. Unmount first." >&2
+  exit 1
+fi
 
 # Partition
-echo "\nPartitioning $DISK ..."
+printf '\nPartitioning %s ...\n' "$DISK"
 wipefs -af "$DISK"
 parted -s "$DISK" mklabel gpt
 parted -s "$DISK" mkpart ESP fat32 1MiB 1025MiB
@@ -130,12 +162,12 @@ if [[ "$DISK" == *nvme* ]] || [[ "$DISK" == *mmcblk* ]]; then
 fi
 
 # Filesystems
-echo "\nCreating filesystems ..."
+printf '\nCreating filesystems ...\n'
 mkfs.fat -F32 -n EFI "$P1"
 mkfs.btrfs -f -L nixos "$P2"
 
 # Subvolumes
-echo "\nCreating subvolumes ..."
+printf '\nCreating subvolumes ...\n'
 mkdir -p /mnt
 mount -o subvolid=5 "$P2" /mnt
 btrfs subvolume create /mnt/@
@@ -145,7 +177,7 @@ btrfs subvolume create /mnt/@snapshots
 umount /mnt
 
 # Mount target (include /.snapshots to aid tools like snapper)
-echo "\nMounting target ..."
+printf '\nMounting target ...\n'
 mount -o compress=zstd,discard=async,noatime,subvol=@ "$P2" /mnt
 mkdir -p /mnt/{home,nix,boot,.snapshots}
 mount -o compress=zstd,discard=async,noatime,subvol=@home "$P2" /mnt/home
@@ -189,7 +221,7 @@ cat > "$CFG" <<NIXCONF
   users.users.${USERNAME} = {
     isNormalUser = true;
     extraGroups = [ "wheel" "networkmanager" "input" ];
-    ${USER_HASH:+initialHashedPassword = "${USER_HASH}";}
+${HASH_LINE:+${HASH_LINE}}
   };
 
   environment.systemPackages = with pkgs; [
@@ -204,7 +236,10 @@ cat > "$CFG" <<NIXCONF
   services.openssh.enable = true;
 
   nixpkgs.config.allowUnfree = true;
-  nix.settings.experimental-features = [ "nix-command" "flakes" ];
+  nix.settings = {
+    experimental-features = [ "nix-command" "flakes" ];
+    accept-flake-config = true;
+  };
 
   security.sudo = {
     enable = true;
@@ -215,9 +250,9 @@ cat > "$CFG" <<NIXCONF
 }
 NIXCONF
 
-echo "\nConfiguration written to $CFG"
+printf '\nConfiguration written to %s\n' "$CFG"
 
-echo "\nStarting installation (you will be prompted to set the root password) ..."
+printf '\nStarting installation (you will be prompted to set the root password) ...\n'
 nixos-install
 
-echo "\nInstallation complete. You can reboot into the installed system."
+printf '\nInstallation complete. You can reboot into the installed system.\n'

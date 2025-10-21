@@ -1,0 +1,108 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Repo-local pre-commit hook: inject author/date/project headers into newly added files.
+# Author: Don Williams (aka ddubs)
+# This only modifies files staged as Added (git add). Existing files are not touched.
+
+AUTHOR="Don Williams (aka ddubs)"
+TODAY="$(date +%Y-%m-%d)"
+
+# Determine project URL from origin, normalize to https when possible
+ORIGIN_URL=$(git config --get remote.origin.url || true)
+PROJECT_URL=""
+if [[ -n "${ORIGIN_URL}" ]]; then
+  case "${ORIGIN_URL}" in
+    git@github.com:*)
+      path=${ORIGIN_URL#git@github.com:}
+      path=${path%.git}
+      PROJECT_URL="https://github.com/${path}"
+      ;;
+    https://github.com/*)
+      path=${ORIGIN_URL#https://github.com/}
+      path=${path%.git}
+      PROJECT_URL="https://github.com/${path}"
+      ;;
+    *) PROJECT_URL="${ORIGIN_URL%.git}" ;;
+  esac
+fi
+
+add_header_md() {
+  local f="$1"
+  # Skip if header already exists
+  if head -n 8 "$f" | grep -q "Author: ${AUTHOR}"; then return; fi
+  local tmp
+  tmp=$(mktemp)
+  {
+    echo "<!--"
+    echo "Author: ${AUTHOR}"
+    echo "Created: ${TODAY}"
+    echo "Project: ${PROJECT_URL}"
+    echo "-->"
+    echo
+    cat "$f"
+  } > "$tmp"
+  mv "$tmp" "$f"
+}
+
+add_header_nix() {
+  local f="$1"
+  if head -n 8 "$f" | grep -q "Author: ${AUTHOR}"; then return; fi
+  local tmp; tmp=$(mktemp)
+  {
+    echo "# Author: ${AUTHOR}"
+    echo "# Created: ${TODAY}"
+    echo "# Project: ${PROJECT_URL}"
+    echo
+    cat "$f"
+  } > "$tmp"
+  mv "$tmp" "$f"
+}
+
+add_header_sh() {
+  local f="$1"
+  # If header already present, skip
+  if head -n 12 "$f" | grep -q "Author: ${AUTHOR}"; then return; fi
+  local first; first="$(head -n1 "$f" || true)"
+  local tmp; tmp=$(mktemp)
+  if [[ "$first" =~ ^#! ]]; then
+    {
+      echo "$first"
+      echo "# Author: ${AUTHOR}"
+      echo "# Created: ${TODAY}"
+      echo "# Project: ${PROJECT_URL}"
+      tail -n +2 "$f"
+    } > "$tmp"
+  else
+    {
+      echo "# Author: ${AUTHOR}"
+      echo "# Created: ${TODAY}"
+      echo "# Project: ${PROJECT_URL}"
+      cat "$f"
+    } > "$tmp"
+  fi
+  mv "$tmp" "$f"
+}
+
+# Only process newly added files in the index
+mapfile -t ADDED < <(git diff --cached --name-status | awk '$1=="A"{print $2}')
+
+for f in "${ADDED[@]}"; do
+  [[ -f "$f" ]] || continue
+  case "$f" in
+    *.md|*.mdx) add_header_md "$f" ;;
+    *.nix) add_header_nix "$f" ;;
+    *.sh|*.bash) add_header_sh "$f" ;;
+    *)
+      # Shebang detection for shell scripts without extension
+      if head -n1 "$f" | grep -q '^#!/.*\bbash\b'; then
+        add_header_sh "$f"
+      fi
+      ;;
+  esac
+  # Re-stage if modified
+  git add -- "$f" || true
+done
+
+exit 0
+

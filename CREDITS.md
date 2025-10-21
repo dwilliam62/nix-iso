@@ -1,3 +1,5 @@
+English | [Español](./CREDITS.es.md)
+
 # Credits and Acknowledgments
 
 This project builds upon the excellent work of the upstream repository:

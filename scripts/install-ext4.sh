@@ -19,8 +19,15 @@ if [ "${EUID:-$(id -u)}" -ne 0 ]; then
   fi
 fi
 
+# Ensure common sbin locations are in PATH
+if ! printf %s "$PATH" | grep -q "/usr/sbin"; then PATH="/usr/sbin:$PATH"; fi
+if ! printf %s "$PATH" | grep -q "/sbin"; then PATH="/sbin:$PATH"; fi
+if [ -d /usr/local/sbin ] && ! printf %s "$PATH" | grep -q "/usr/local/sbin"; then PATH="/usr/local/sbin:$PATH"; fi
+if [ -d /run/current-system/sw/bin ] && ! printf %s "$PATH" | grep -q "/run/current-system/sw/bin"; then PATH="/run/current-system/sw/bin:$PATH"; fi
+export PATH
+
 require() { command -v "$1" >/dev/null 2>&1 || { echo "Missing dependency: $1" >&2; exit 1; }; }
-for dep in lsblk parted mkfs.fat mkfs.ext4 mount umount sed awk tee nixos-generate-config nixos-install; do
+for dep in lsblk parted mkfs.fat mkfs.ext4 mount umount sed awk tee nixos-generate-config nixos-install wipefs; do
   require "$dep"
 done
 
@@ -61,6 +68,13 @@ if command -v openssl >/dev/null 2>&1; then
   done
 else
   echo "Warning: openssl not found; user '$USERNAME' will be created without a password. You can set it after first boot." >&2
+fi
+
+# Prepare Nix line for initialHashedPassword with quotes preserved
+HASH_LINE=""
+if [ -n "${USER_HASH}" ]; then
+  ESC_HASH=${USER_HASH//\"/\\\"}
+  HASH_LINE="    initialHashedPassword = \"${ESC_HASH}\";"
 fi
 
 # Disk selection
@@ -109,10 +123,13 @@ read -r -p "Type 'INSTALL' to proceed: " confirm
 [ "$confirm" = "INSTALL" ] || { echo "Aborted"; exit 1; }
 
 # Ensure not mounted
-mount | grep -E "^$DISK" && { echo "Device appears mounted. Unmount first." >&2; exit 1; } || true
+if mount | grep -Eq "^$DISK"; then
+  echo "Device appears mounted. Unmount first." >&2
+  exit 1
+fi
 
 # Partition
-echo "\nPartitioning $DISK ..."
+printf '\nPartitioning %s ...\n' "$DISK"
 wipefs -af "$DISK"
 parted -s "$DISK" mklabel gpt
 parted -s "$DISK" mkpart ESP fat32 1MiB 1025MiB
@@ -127,12 +144,12 @@ if [[ "$DISK" == *nvme* ]] || [[ "$DISK" == *mmcblk* ]]; then
 fi
 
 # Filesystems
-echo "\nCreating filesystems ..."
+printf '\nCreating filesystems ...\n'
 mkfs.fat -F32 -n EFI "$P1"
 mkfs.ext4 -F -L nixos "$P2"
 
 # Mount target
-echo "\nMounting target ..."
+printf '\nMounting target ...\n'
 mkdir -p /mnt
 mount -o noatime "$P2" /mnt
 mkdir -p /mnt/{home,nix,boot,.snapshots}
@@ -174,7 +191,7 @@ cat > "$CFG" <<NIXCONF
   users.users.${USERNAME} = {
     isNormalUser = true;
     extraGroups = [ "wheel" "networkmanager" "input" ];
-    ${USER_HASH:+initialHashedPassword = "${USER_HASH}";}
+${HASH_LINE:+${HASH_LINE}}
   };
 
   environment.systemPackages = with pkgs; [
@@ -190,7 +207,10 @@ cat > "$CFG" <<NIXCONF
   services.fstrim.enable = true;
 
   nixpkgs.config.allowUnfree = true;
-  nix.settings.experimental-features = [ "nix-command" "flakes" ];
+  nix.settings = {
+    experimental-features = [ "nix-command" "flakes" ];
+    accept-flake-config = true;
+  };
 
   security.sudo = {
     enable = true;
@@ -201,10 +221,10 @@ cat > "$CFG" <<NIXCONF
 }
 NIXCONF
 
-echo "\nConfiguration written to $CFG"
+printf '\nConfiguration written to %s\n' "$CFG"
 
-echo "\nStarting installation (you will be prompted to set the root password) ..."
+printf '\nStarting installation (you will be prompted to set the root password) ...\n'
 nixos-install
 
-echo "\nInstallation complete. You can reboot into the installed system."
+printf '\nInstallation complete. You can reboot into the installed system.\n'
 

@@ -19,7 +19,12 @@
 
   networking.hostName = "nixos-minimal"; # set live session hostname
 
+  # Show a hint after auto-login on console
+  environment.loginShellInit = ''
+    printf "\nTo access menu -- run nix-iso\n\n"
+  '';
+
   # Customize ISO filename to distinguish from standard NixOS ISOs
   image.fileName = lib.mkForce "nixos-ddubsos-minimal-${config.system.nixos.label}-${pkgs.stdenv.hostPlatform.system}.iso";
-  isoImage.isoName = lib.mkForce "nixos-ddubsos-minimal-${config.system.nixos.label}-${pkgs.stdenv.hostPlatform.system}.iso";
+  #isoImage.isoName = lib.mkForce "nixos-ddubsos-minimal-${config.system.nixos.label}-${pkgs.stdenv.hostPlatform.system}.iso";
 }

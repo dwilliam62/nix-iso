@@ -1,6 +1,11 @@
 # This module defines a NixOS installation CD that contains Cosmic.
 
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 {
   imports = [
@@ -22,5 +27,5 @@
 
   # Customize ISO filename to distinguish from standard NixOS ISOs
   image.fileName = lib.mkForce "nixos-ddubsos-cosmic-${config.system.nixos.label}-${pkgs.stdenv.hostPlatform.system}.iso";
-  isoImage.isoName = lib.mkForce "nixos-ddubsos-cosmic-${config.system.nixos.label}-${pkgs.stdenv.hostPlatform.system}.iso";
+  #isoImage.isoName = lib.mkForce "nixos-ddubsos-cosmic-${config.system.nixos.label}-${pkgs.stdenv.hostPlatform.system}.iso";
 }

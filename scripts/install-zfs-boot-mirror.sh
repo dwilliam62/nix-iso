@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
-# Interactive installer for a ZFS-based NixOS system.
-# - Prompts for timezone, keymap, hostname, username
-# - Lets user select target disk
-# - Partitions (GPT: 1GiB ESP + rest for zpool)
-# - Creates zpool and datasets with sane defaults and zstd compression
-# - Mounts datasets with legacy mountpoints
-# - Generates hardware config and writes a configuration.nix template
+# Author: Don Williams (aka ddubs)
+# Created: 2025-10-21
+# Project: https://github.com/dwilliam62/nix-iso
+# Interactive installer for a mirrored ZFS bootable NixOS system.
+# - Prompts for timezone, keymap, hostname, username, pool name
+# - Verifies at least two available, completely unmounted disks
+# - Lets user select two target disks (sizes must be equal or one larger)
+# - Partitions both disks (GPT: 1GiB ESP + rest for zpool)
+# - Creates a mirrored zpool and datasets with zstd compression
+# - Mounts datasets with legacy mountpoints; mounts both ESPs at /mnt/boot and /mnt/boot2
+# - Generates hardware config and writes a configuration.nix including mirrored systemd-boot
 # - Runs nixos-install (root password will be prompted interactively)
 
 set -euo pipefail
@@ -20,15 +24,8 @@ if [ "${EUID:-$(id -u)}" -ne 0 ]; then
   fi
 fi
 
-# Ensure common sbin locations are in PATH (some distros place parted, lsblk, etc. in /usr/sbin or /sbin)
-if ! printf %s "$PATH" | grep -q "/usr/sbin"; then PATH="/usr/sbin:$PATH"; fi
-if ! printf %s "$PATH" | grep -q "/sbin"; then PATH="/sbin:$PATH"; fi
-if [ -d /usr/local/sbin ] && ! printf %s "$PATH" | grep -q "/usr/local/sbin"; then PATH="/usr/local/sbin:$PATH"; fi
-if [ -d /run/current-system/sw/bin ] && ! printf %s "$PATH" | grep -q "/run/current-system/sw/bin"; then PATH="/run/current-system/sw/bin:$PATH"; fi
-export PATH
-
 require() { command -v "$1" >/dev/null 2>&1 || { echo "Missing dependency: $1" >&2; exit 1; }; }
-for dep in lsblk parted mkfs.fat zpool zfs mount umount sed awk tee nixos-generate-config nixos-install; do
+for dep in lsblk parted mkfs.fat zpool zfs mount umount sed awk tee nixos-generate-config nixos-install blkid blockdev wipefs; do
   require "$dep"
 done
 
@@ -55,7 +52,7 @@ POOL=${POOL:-rpool}
 # Generate a hostid for ZFS import in initrd
 HOSTID=$(head -c4 /dev/urandom | od -A none -t x4 | awk '{print $1}')
 
-echo "=== NixOS ZFS Installer ==="
+echo "=== NixOS ZFS Mirrored Boot Installer ==="
 
 # Environment diagnostics and guardrails
 check_zfs_kernel
@@ -65,7 +62,7 @@ fi
 if [ ! -d /sys/firmware/efi/efivars ]; then
   echo "NOTE: UEFI efivars not available; NVRAM enrollment may be skipped by systemd-boot." >&2
 fi
-# Refuse if any ZFS filesystems are mounted or pools imported (avoid accidental interference)
+# Refuse if any ZFS filesystems are mounted or pools imported
 # Use /proc/self/mounts for an exact fstype match and show what we found.
 if awk '$3=="zfs"{found=1; exit} END{exit !found}' /proc/self/mounts; then
   echo "ERROR: One or more ZFS filesystems are currently mounted:" >&2
@@ -83,7 +80,6 @@ if command -v zpool >/dev/null 2>&1; then
   fi
 fi
 
-# Prominent warning about ZFS and broken kernel markers on NixOS
 echo
 echo "WARNING: ZFS on NixOS may be marked as BROKEN at times when the kernel and ZFS ABI drift."
 echo "- Ensure you use a matching kernel+ZFS pair (e.g., linuxPackages_cachyos + zfs_cachyos), or pin nixpkgs to a known-good revision."
@@ -125,82 +121,160 @@ fi
 # Prepare Nix line for initialHashedPassword with quotes preserved
 HASH_LINE=""
 if [ -n "${USER_HASH}" ]; then
-  # Escape any embedded double quotes just in case (openssl -6 output normally has none)
   ESC_HASH=${USER_HASH//\"/\\\"}
   HASH_LINE="    initialHashedPassword = \"${ESC_HASH}\";"
 fi
 
-# Disk selection
+# Build list of available, completely unmounted disks
 echo
-echo "Available disks:"
-mapfile -t DISK_ROWS < <(lsblk -dn -o NAME,SIZE,TYPE,MODEL | awk '$3=="disk" {m=$4; if (m=="") m="-"; printf "%s\t%s\t%s\n", $1,$2,m}')
-if [ "${#DISK_ROWS[@]}" -eq 0 ]; then
-  echo "No disks detected. Are you running in a VM without storage, or missing permissions?" >&2
+echo "Scanning for available, unmounted disks ..."
+mapfile -t ALL_DISKS < <(lsblk -dn -o NAME,TYPE | awk '$2=="disk"{print $1}')
+avail_names=()
+avail_sizes=()
+avail_models=()
+for name in "${ALL_DISKS[@]}"; do
+  # Skip if any mountpoints exist under this disk
+  if lsblk -n -o MOUNTPOINTS "/dev/$name" | grep -q "[^[:space:]]"; then
+    continue
+  fi
+  size_b=$(blockdev --getsize64 "/dev/$name" 2>/dev/null || echo 0)
+  model=$(lsblk -dn -o MODEL "/dev/$name" 2>/dev/null | sed 's/^$/-/' )
+  avail_names+=("$name")
+  avail_sizes+=("$size_b")
+  avail_models+=("$model")
+done
+
+if [ "${#avail_names[@]}" -lt 2 ]; then
+  echo "Need at least TWO completely unmounted disks. Found: ${#avail_names[@]}" >&2
+  echo "Ensure target disks and their partitions are unmounted before proceeding." >&2
   exit 1
 fi
+
+echo
+echo "Available disks:"  
 idx=1
-for row in "${DISK_ROWS[@]}"; do
-  name=$(echo "$row" | awk '{print $1}')
-  size=$(echo "$row" | awk '{print $2}')
-  model=$(echo "$row" | awk '{print $3}')
-  printf "[%d] /dev/%s  %s  %s\n" "$idx" "$name" "$size" "$model"
+for i in "${!avail_names[@]}"; do
+  name="${avail_names[$i]}"
+  size_h=$(lsblk -dn -o SIZE "/dev/$name")
+  model="${avail_models[$i]}"
+  printf "[%d] /dev/%s  %s  %s\n" "$idx" "$name" "$size_h" "$model"
   idx=$((idx+1))
 done
+
 echo
-read -r -p "Select disk by number (1-${#DISK_ROWS[@]}) or enter device path (/dev/sdX, /dev/vdX, /dev/nvmeXnY): " choice
-if [[ "$choice" =~ ^/dev/ ]]; then
-  DISK="$choice"
-elif [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "${#DISK_ROWS[@]}" ]; then
-  sel_row="${DISK_ROWS[$((choice-1))]}"
-  sel_name=$(echo "$sel_row" | awk '{print $1}')
-  DISK="/dev/$sel_name"
-else
-  echo "Invalid selection: $choice" >&2
+read -r -p "Select TWO disks by numbers (e.g., '1 2') or enter two device paths (e.g., '/dev/sda /dev/sdb'): " selection
+
+# Use status code + global PARSE_ERR; set DISK1/DISK2 in current shell
+PARSE_ERR=""
+parse_selection() {
+  local sel="$1"
+  # Normalize commas -> spaces
+  sel=$(echo "$sel" | tr ',' ' ')
+  # Split into array
+  read -r -a tokens <<<"$sel"
+  if [ "${#tokens[@]}" -ne 2 ]; then
+    PARSE_ERR="expect_two"; return 1
+  fi
+  local a="${tokens[0]}" b="${tokens[1]}"
+  if [[ "$a" =~ ^/dev/ ]]; then
+    DISK1="$a"; DISK2="$b"
+  else
+    if [[ ! "$a" =~ ^[0-9]+$ ]] || [[ ! "$b" =~ ^[0-9]+$ ]]; then
+      PARSE_ERR="invalid"; return 1
+    fi
+    if [ "$a" -lt 1 ] || [ "$a" -gt "${#avail_names[@]}" ] || [ "$b" -lt 1 ] || [ "$b" -gt "${#avail_names[@]}" ]; then
+      PARSE_ERR="out_of_range"; return 1
+    fi
+    DISK1="/dev/${avail_names[$((a-1))]}"
+    DISK2="/dev/${avail_names[$((b-1))]}"
+  fi
+  PARSE_ERR=""
+  return 0
+}
+
+if ! parse_selection "$selection"; then
+  case "$PARSE_ERR" in
+    expect_two) echo "Please provide exactly two selections." >&2 ;;
+    invalid) echo "Invalid input. Use numbers or device paths." >&2 ;;
+    out_of_range) echo "Selection out of range." >&2 ;;
+    *) echo "Invalid selection." >&2 ;;
+  esac
   exit 1
 fi
 
-# Validate block device and write access (not read-only)
-[ -b "$DISK" ] || { echo "Not a block device: $DISK" >&2; exit 1; }
-if command -v blockdev >/dev/null 2>&1; then
-  ro=$(blockdev --getro "$DISK" || echo 1)
-  if [ "$ro" != "0" ]; then
-    echo "Device appears read-only: $DISK (blockdev --getro != 0). Check VM settings and permissions." >&2
-    exit 1
-  fi
+if [ "$DISK1" = "$DISK2" ]; then
+  echo "You selected the same disk twice. Please select two different disks." >&2
+  exit 1
 fi
 
-# Final confirmation
+# Validate block devices and write access
+for d in "$DISK1" "$DISK2"; do
+  [ -b "$d" ] || { echo "Not a block device: $d" >&2; exit 1; }
+  ro=$(blockdev --getro "$d" || echo 1)
+  if [ "$ro" != "0" ]; then
+    echo "Device appears read-only: $d. Check settings/permissions." >&2
+    exit 1
+  fi
+  # Re-check unmounted at selection time
+  if lsblk -n -o MOUNTPOINTS "$d" | grep -q "[^[:space:]]"; then
+    echo "Device $d or its partitions appear mounted. Unmount first." >&2
+    exit 1
+  fi
+ done
+
+# Check sizes
+SIZE1=$(blockdev --getsize64 "$DISK1")
+SIZE2=$(blockdev --getsize64 "$DISK2")
+HUM1=$(lsblk -dn -o SIZE "$DISK1")
+HUM2=$(lsblk -dn -o SIZE "$DISK2")
+
+if [ "$SIZE1" -ne "$SIZE2" ]; then
+  echo
+  echo "NOTICE: Selected disks are different sizes ($DISK1: $HUM1, $DISK2: $HUM2)."
+  echo "The ZFS mirror will use only the size of the smaller disk."
+fi
+
+# Final destructive confirmation
 echo
-echo "WARNING: This will destroy ALL data on $DISK"
+echo "WARNING: This will destroy ALL data on $DISK1 AND $DISK2"
 read -r -p "Type 'INSTALL' to proceed: " confirm
 [ "$confirm" = "INSTALL" ] || { echo "Aborted"; exit 1; }
 
-# Ensure not mounted
-if mount | grep -Eq "^$DISK"; then
-  echo "Device appears mounted. Unmount first." >&2
-  exit 1
-fi
+# Helper to get partition names
+part_names() {
+  local d="$1"
+  local p1 p2
+  if [[ "$d" == *nvme* ]] || [[ "$d" == *mmcblk* ]]; then
+    p1="${d}p1"; p2="${d}p2"
+  else
+    p1="${d}1"; p2="${d}2"
+  fi
+  echo "$p1 $p2"
+}
 
-# Partition
-printf '\nPartitioning %s ...\n' "$DISK"
-wipefs -af "$DISK"
-parted -s "$DISK" mklabel gpt
-parted -s "$DISK" mkpart ESP fat32 1MiB 1025MiB
-parted -s "$DISK" set 1 esp on
-parted -s "$DISK" mkpart primary 1025MiB 100%
+# Partition both disks
+partition_disk() {
+  local d="$1"
+  wipefs -af "$d"
+  parted -s "$d" mklabel gpt
+  parted -s "$d" mkpart ESP fat32 1MiB 1025MiB
+  parted -s "$d" set 1 esp on
+  parted -s "$d" mkpart primary 1025MiB 100%
+}
 
-# Derive partition names
-P1="$DISK"1
-P2="$DISK"2
-if [[ "$DISK" == *nvme* ]] || [[ "$DISK" == *mmcblk* ]]; then
-  P1="${DISK}p1"; P2="${DISK}p2"
-fi
+printf '\nPartitioning %s and %s ...\n' "$DISK1" "$DISK2"
+partition_disk "$DISK1"
+partition_disk "$DISK2"
+
+read -r P1A P2A < <(part_names "$DISK1")
+read -r P1B P2B < <(part_names "$DISK2")
 
 # Filesystems (EFI) and ZFS pool
 printf '\nCreating filesystems and ZFS pool ...\n'
-mkfs.fat -F32 -n EFI "$P1"
+mkfs.fat -F32 -n EFI_A "$P1A"
+mkfs.fat -F32 -n EFI_B "$P1B"
 
-# Create zpool with safe defaults + compression
+# Create mirrored zpool with safe defaults + compression
 zpool create -f \
   -o ashift=12 \
   -o autotrim=on \
@@ -210,7 +284,7 @@ zpool create -f \
   -O acltype=posixacl \
   -O mountpoint=none \
   -R /mnt \
-  "$POOL" "$P2"
+  "$POOL" mirror "$P2A" "$P2B"
 
 # Datasets (legacy mountpoints for control via /etc/fstab)
 # Container for root; actual root lives under root/nixos
@@ -232,17 +306,22 @@ zfs create -o mountpoint=legacy "$POOL/var/lib"
 printf '\nMounting target ...\n'
 mkdir -p /mnt
 mount -t zfs "$POOL/root/nixos" /mnt
-mkdir -p /mnt/{home,nix,boot,var,var/log,var/cache,var/tmp,var/lib}
+mkdir -p /mnt/{home,nix,boot,boot2,var,var/log,var/cache,var/tmp,var/lib}
 mount -t zfs "$POOL/home" /mnt/home
 mount -t zfs "$POOL/nix" /mnt/nix
 mount -t zfs "$POOL/var/log" /mnt/var/log
 mount -t zfs "$POOL/var/cache" /mnt/var/cache
 mount -t zfs "$POOL/var/tmp" /mnt/var/tmp
 mount -t zfs "$POOL/var/lib" /mnt/var/lib
-mount "$P1" /mnt/boot
+mount "$P1A" /mnt/boot
+mount "$P1B" /mnt/boot2
 
 # Generate hardware config
 nixos-generate-config --root /mnt
+
+# Gather UUIDs for ESPs (for mirroredBoots devices)
+# UUID_A intentionally unused; /boot2 mirroredBoots uses UUID_B only
+UUID_B=$(blkid -s UUID -o value "$P1B")
 
 # Write configuration.nix
 CFG=/mnt/etc/nixos/configuration.nix
@@ -253,8 +332,19 @@ cat > "$CFG" <<NIXCONF
 
   boot = {
     supportedFilesystems = [ "zfs" ];
+    initrd.supportedFilesystems = [ "zfs" ];
     loader = {
-      systemd-boot.enable = true;
+      systemd-boot = {
+        enable = true;
+        # NOTE: mirroredBoots is commented out to avoid infinite recursion
+        # Uncomment the following lines if your NixOS version supports mirroredBoots:
+        # mirroredBoots = [
+        #   {
+        #     path = "/boot2";
+        #     devices = [ "/dev/disk/by-uuid/${UUID_B}" ];
+        #   }
+        # ];
+      };
       efi.canTouchEfiVariables = true;
     };
     kernelModules = [ "z3fold" ];

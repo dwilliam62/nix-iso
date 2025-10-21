@@ -1,18 +1,24 @@
-English | [Español](./nixos-btrfs-install.es.md)
+<!--
+Author: Don Williams (aka ddubs)
+Created: 2025-10-21
+Project: https://github.com/dwilliam62/nix-iso
+-->
 
-# NixOS Btrfs Install Playbook (Non-Interactive)
+[English](./nixos-btrfs-install.md) | Español
 
-This playbook mirrors what the interactive Btrfs installers do, using robust, non-interactive commands.
-It also highlights mirrored boot setup when two disks are available.
+# Manual de instalación de NixOS con Btrfs (no interactivo)
 
-Principles
-- Use non-interactive commands to avoid losing SSH sessions.
-- Bootstrap tools with nix-shell --run wrappers.
-- Prefer complete file writes (heredocs) over inline edits.
-- Use absolute paths and disable pagers/aliases.
+Este manual refleja lo que hacen los instaladores interactivos de Btrfs, usando comandos robustos y no interactivos.
+También destaca la configuración de arranque en espejo cuando hay dos discos disponibles.
 
-Tool Bundle (on-demand)
-Bring common CLI tools as needed without leaving your session:
+Principios
+- Usar comandos no interactivos para evitar perder sesiones SSH.
+- Aprovisionar herramientas con envoltorios nix-shell --run.
+- Preferir escrituras completas de archivos (heredocs) en lugar de ediciones en línea.
+- Usar rutas absolutas y deshabilitar paginadores/alias.
+
+Conjunto de herramientas (bajo demanda)
+Trae herramientas comunes de CLI según sea necesario sin salir de tu sesión:
 
 ```bash
 nix-shell -p \
@@ -23,28 +29,28 @@ nix-shell -p \
   --run 'bash -lc "echo tools ready"'
 ```
 
-Notes
-- coreutils gives real cat, tee, nl; use command cat to bypass aliases like bat.
-- nfs-utils provides the NFS client. neovim is optional; prefer scripted edits.
+Notas
+- coreutils provee cat real, tee, nl; usa command cat para evitar alias como bat.
+- nfs-utils proporciona el cliente NFS. neovim es opcional; preferir ediciones por script.
 
-Steps
+Pasos
 
-0. Identify Target Disk (safety) nix-shell -p coreutils util-linux --run 'bash
+0. Identificar el disco de destino (seguridad) nix-shell -p coreutils util-linux --run 'bash
    -lc " lsblk -o NAME,SIZE,TYPE,MOUNTPOINT,FSTYPE,MODEL echo; echo
-   /dev/disk/by-id: ls -l /dev/disk/by-id "' Confirm the target device (e.g.,
+   /dev/disk/by-id: ls -l /dev/disk/by-id "' Confirma el dispositivo de destino (p. ej.,
    /dev/sda vs /dev/nvme0n1).
 
-1. Partition: GPT, 1024 MiB ESP + rest Btrfs nix-shell -p util-linux parted
+1. Particionar: GPT, 1024 MiB ESP + resto Btrfs nix-shell -p util-linux parted
    --run 'bash -lc " set -euxo pipefail TARGET=/dev/sda wipefs -af "$TARGET"
 parted -s "$TARGET" mklabel gpt parted -s
    "$TARGET" mkpart ESP fat32 1MiB 1025MiB
 parted -s "$TARGET" set 1 esp on parted -s "$TARGET" mkpart primary btrfs
    1025MiB 100% "'
 
-2. Filesystems nix-shell -p dosfstools btrfs-progs --run 'bash -lc " set -euxo
+2. Sistemas de archivos nix-shell -p dosfstools btrfs-progs --run 'bash -lc " set -euxo
    pipefail mkfs.fat -F32 -n EFI /dev/sda1 mkfs.btrfs -f -L nixos /dev/sda2 "'
 
-3. Create Btrfs Subvolumes (@, @home, @nix, optionally @snapshots)
+3. Crear subvolúmenes Btrfs (@, @home, @nix, opcionalmente @snapshots)
    nix-shell -p btrfs-progs coreutils --run 'bash -lc " set -euxo pipefail \
    mkdir -p /mnt; mount -o subvolid=5 /dev/sda2 /mnt; \
    btrfs subvolume create /mnt/@; \
@@ -53,7 +59,7 @@ parted -s "$TARGET" set 1 esp on parted -s "$TARGET" mkpart primary btrfs
    btrfs subvolume create /mnt/@snapshots; \
    umount /mnt "'
 
-4. Mount Subvolumes (compress=zstd, discard=async, noatime)
+4. Montar subvolúmenes (compress=zstd, discard=async, noatime)
    nix-shell -p btrfs-progs coreutils dosfstools --run 'bash -lc " set -euxo pipefail \
    mount -o compress=zstd,discard=async,noatime,subvol=@ /dev/sda2 /mnt; \
    mkdir -p /mnt/{home,nix,boot}; \
@@ -62,10 +68,10 @@ parted -s "$TARGET" set 1 esp on parted -s "$TARGET" mkpart primary btrfs
    mount /dev/sda1 /mnt/boot; \
    mount | grep -E "^/dev/(sd|nvme)" "'
 
-5. Generate Base Config nix-shell -p nixos-install-tools --run 'bash -lc "
+5. Generar configuración base nix-shell -p nixos-install-tools --run 'bash -lc "
    nixos-generate-config --root /mnt "'
 
-6. Add NFS mount to hardware-configuration.nix nix-shell -p gnused coreutils
+6. Añadir montaje NFS a hardware-configuration.nix nix-shell -p gnused coreutils
    --run 'bash -lc " set -euo pipefail
    HC=/mnt/etc/nixos/hardware-configuration.nix mkdir -p /mnt/nas grep -Fq
    "fileSystems.\"/mnt/nas\"" "$HC" || tee -a "$HC" >/dev/null <<'NIXEOF'
@@ -74,8 +80,8 @@ NFS mount fileSystems."/mnt/nas" = { device =
 "192.168.40.11:/volume1/DiskStation54TB"; fsType = "nfs"; options = [ "rw" "bg"
 "intr" "soft" "tcp" "_netdev" ]; }; NIXEOF "'
 
-7. Write configuration.nix (one-shot) Includes UEFI boot, hostname, user,
-   packages, OpenSSH, NFS client, and zswap via kernelParams (works across
+7. Escribir configuration.nix (de una vez) Incluye arranque UEFI, hostname, usuario,
+   paquetes, OpenSSH, cliente NFS y zswap vía kernelParams (funciona en
    25.05). nix-shell -p coreutils --run 'bash -lc " set -euo pipefail tee
    /mnt/etc/nixos/configuration.nix >/dev/null <<'NIXCONF' { pkgs, ... }:
 
@@ -111,11 +117,11 @@ security.sudo = { enable = true; wheelNeedsPassword = true; };
 
 system.stateVersion = "25.11";
 
-8. Install (interactive root password prompt)
+8. Instalar (solicita contraseña de root de forma interactiva)
    nixos-install
-   Follow the prompt to set the root password.
+   Sigue la indicación para establecer la contraseña de root.
 
-9. Reboot and Verify
+9. Reiniciar y verificar
    mount | grep -E '^/dev/(sd|nvme)'
    systemctl status remote-fs.target
    cat /sys/module/zswap/parameters/enabled
@@ -123,15 +129,16 @@ system.stateVersion = "25.11";
    cat /sys/module/zswap/parameters/max_pool_percent
    cat /sys/module/zswap/parameters/zpool
 
-Pitfalls and Remedies • Missing tools: always wrap with nix-shell -p ... --run
-'bash -lc "..."' to avoid interactive shells. • Aliases (cat->bat): use command
-cat or rely on tee/sed -n. • Zsh history expansion: prefer bash -lc or set +H. •
-boot.zswap not available: use boot.kernelParams + boot.kernelModules approach
-for zswap. • Btrfs top-level: mount subvolid=5 to create/list subvolumes. •
-NVIDIA Werror on linux-zen: switch to mainline kernelPackages or proprietary
-driver if needed; avoid Werror if patching.
+Escollos y soluciones • Falta de herramientas: siempre envuelve con nix-shell -p ... --run
+'bash -lc "..."' para evitar shells interactivos. • Alias (cat->bat): usa command
+cat o apóyate en tee/sed -n. • Expansión de historial en zsh: prefiere bash -lc o set +H. •
+boot.zswap no disponible: usa boot.kernelParams + boot.kernelModules para
+zswap. • Nivel superior de Btrfs: monta subvolid=5 para crear/listar subvolúmenes. •
+Werror de NVIDIA en linux-zen: cambia a kernelPackages mainline o al controlador propietario
+si es necesario; evita Werror si aplicas parches.
 
-Optional • Non-interactive root password (hash): nix-shell -p openssl --run
+Opcional • Contraseña de root no interactiva (hash): nix-shell -p openssl --run
 'bash -lc "read -rsp "root password: " P; echo; printf %s "$P" | openssl passwd
--6 -stdin"' Then add to configuration.nix:
+-6 -stdin"' Luego añade a configuration.nix:
 users.users.root.initialHashedPassword = "<hash>"; EOF
+

@@ -1,0 +1,154 @@
+#!/usr/bin/env bash
+# Author: Don Williams (aka ddubs)
+# Created: 2025-10-21
+# Project: https://github.com/dwilliam62/nix-iso
+set -euo pipefail
+
+# nix-iso: Minimal modular TUI launcher for the live ISO
+# Title: NIXOS installer
+# This script discovers menu sections by sourcing modules in $(dirname "$0")/tui/modules.
+# New features can be added by placing a new module file that calls register_section/register_item.
+
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+# shellcheck source=/dev/null
+source "$SCRIPT_DIR/tui/lib.sh"
+
+# Load modules (each module registers its sections and items)
+MODULES_DIR="$SCRIPT_DIR/tui/modules"
+if [[ -d "$MODULES_DIR" ]]; then
+  for mod in "$MODULES_DIR"/*.sh; do
+    # shellcheck source=/dev/null
+    source "$mod"
+  done
+fi
+
+# Ensure menu order: Install first, Documentation second (if present)
+if declare -p SECTIONS_ORDER >/dev/null 2>&1; then
+  declare -A _seen=()
+  _new_order=()
+  for want in installers docs; do
+    for s in "${SECTIONS_ORDER[@]}"; do
+      if [[ "$s" == "$want" && -z "${_seen[$s]:-}" ]]; then
+        _new_order+=("$s"); _seen[$s]=1; break
+      fi
+    done
+  done
+  for s in "${SECTIONS_ORDER[@]}"; do
+    if [[ -z "${_seen[$s]:-}" ]]; then _new_order+=("$s"); _seen[$s]=1; fi
+  done
+  SECTIONS_ORDER=("${_new_order[@]}")
+  unset _seen _new_order
+fi
+
+main_menu() {
+  while true; do
+    clear
+    print_header "NIXOS installer"
+    echo "Select a section:"
+    echo
+
+    local i=1
+    local choices=()
+    for section_id in "${SECTIONS_ORDER[@]}"; do
+      local title="${SECTIONS_TITLES[$section_id]}"
+      printf "  %2d) %s\n" "$i" "$title"
+      choices+=("$section_id")
+      ((i++))
+    done
+    printf "  %2d) Exit\n" "$i"
+
+    echo
+    read -rp "Enter choice: " choice
+    if ! is_number "$choice"; then
+      warn "Invalid input: not a number"
+      continue
+    fi
+    local idx=$((choice))
+    if (( idx == i )); then
+      exit 0
+    fi
+    if (( idx < 1 || idx > ${#choices[@]} )); then
+      warn "Invalid choice"
+      continue
+    fi
+
+    local section_id="${choices[$((idx-1))]}"
+    section_menu "$section_id"
+  done
+}
+
+section_menu() {
+  local section_id="$1"
+  while true; do
+    clear
+    print_header "${SECTIONS_TITLES[$section_id]}"
+
+    local -n items_ref="SECTION_ITEMS_$section_id" 2>/dev/null || true
+    if [[ -z "${items_ref+x}" ]]; then
+      warn "No items registered for section: $section_id"
+      read -rp "Press Enter to return..." _
+      return
+    fi
+
+    echo "Select an action:"
+    echo
+    local i=1
+    local choices=()
+    for item_id in "${items_ref[@]}"; do
+      local label="${ITEM_LABEL[$item_id]}"
+      local warn_txt="${ITEM_WARN[$item_id]:-}"
+      local itype="${ITEM_TYPE[$item_id]:-action}"
+      if [[ "$itype" == "header" ]]; then
+        echo
+        echo "$(color_cyan "$label")"
+        continue
+      fi
+      if [[ -n "$warn_txt" ]]; then
+        printf "  %2d) %s %s\n" "$i" "$label" "$(color_yellow "[${warn_txt}]")"
+      else
+        printf "  %2d) %s\n" "$i" "$label"
+      fi
+      choices+=("$item_id")
+      ((i++))
+    done
+    printf "  %2d) Back\n" "$i"
+
+    echo
+    read -rp "Enter choice: " choice
+    if ! is_number "$choice"; then
+      warn "Invalid input: not a number"
+      continue
+    fi
+    local idx=$((choice))
+    if (( idx == i )); then
+      return
+    fi
+    if (( idx < 1 || idx > ${#choices[@]} )); then
+      warn "Invalid choice"
+      continue
+    fi
+
+    local item_id="${choices[$((idx-1))]}"
+    local warn_txt="${ITEM_WARN[$item_id]:-}"
+    if [[ -n "$warn_txt" ]]; then
+      echo
+      echo "$(color_yellow "Warning: $warn_txt")"
+      if ! confirm "Proceed?"; then
+        continue
+      fi
+    fi
+
+    echo
+    echo "$(color_cyan ">> Running: ${ITEM_LABEL[$item_id]}")"
+    echo
+    # Run the item command in the current shell so module-defined helpers are available
+    # Using eval here allows function calls like _open_or_print to work.
+    eval "${ITEM_CMD[$item_id]}" || true
+    echo
+    read -rp "Press Enter to return to menu..." _
+  done
+}
+
+# Start the UI
+main_menu
+

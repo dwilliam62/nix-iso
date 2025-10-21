@@ -20,10 +20,34 @@ if [ "${EUID:-$(id -u)}" -ne 0 ]; then
   fi
 fi
 
+# Ensure common sbin locations are in PATH
+if ! printf %s "$PATH" | grep -q "/usr/sbin"; then PATH="/usr/sbin:$PATH"; fi
+if ! printf %s "$PATH" | grep -q "/sbin"; then PATH="/sbin:$PATH"; fi
+if [ -d /usr/local/sbin ] && ! printf %s "$PATH" | grep -q "/usr/local/sbin"; then PATH="/usr/local/sbin:$PATH"; fi
+if [ -d /run/current-system/sw/bin ] && ! printf %s "$PATH" | grep -q "/run/current-system/sw/bin"; then PATH="/run/current-system/sw/bin:$PATH"; fi
+export PATH
+
 require() { command -v "$1" >/dev/null 2>&1 || { echo "Missing dependency: $1" >&2; exit 1; }; }
-for dep in lsblk parted mkfs.fat mkfs.bcachefs mount umount sed awk tee nixos-generate-config nixos-install; do
+for dep in lsblk parted mkfs.fat mkfs.bcachefs bcachefs mount umount sed awk tee nixos-generate-config nixos-install wipefs blkid; do
   require "$dep"
 done
+
+# Guardrail: verify kernel support for bcachefs (either built-in or loadable module)
+check_bcachefs_kernel() {
+  if grep -qw bcachefs /proc/filesystems; then
+    return 0
+  fi
+  if command -v modprobe >/dev/null 2>&1; then
+    if modprobe -q bcachefs 2>/dev/null; then
+      if grep -qw bcachefs /proc/filesystems; then
+        return 0
+      fi
+    fi
+  fi
+  echo "ERROR: Kernel bcachefs support not detected (not listed in /proc/filesystems and modprobe failed)." >&2
+  echo "This environment likely cannot boot a bcachefs root. Use a kernel with bcachefs enabled or switch filesystems." >&2
+  exit 1
+}
 
 # Defaults
 TIMEZONE=${TIMEZONE:-America/New_York}
@@ -32,6 +56,36 @@ HOSTNAME=${HOSTNAME:-nixos}
 USERNAME=${USERNAME:-dwilliams}
 
 echo "=== NixOS bcachefs Installer ==="
+
+# Prominent warning about bcachefs stability
+echo
+echo "WARNING: bcachefs is experimental and provided AS-IS."
+echo "- It may change or be removed from kernels in the future."
+echo "- Do NOT use bcachefs for production environments or to store important data."
+echo "- Prefer testing in a VM or on disposable hardware. Consider pinning nixpkgs to a known-good revision for kernel/tools compatibility."
+
+# Require explicit acknowledgement for experimental filesystem
+read -r -p "Type 'EXPERIMENT' to acknowledge the risks and continue: " EXP_ACK
+[ "$EXP_ACK" = "EXPERIMENT" ] || { echo "Aborted"; exit 1; }
+
+# Guardrail: ensure kernel actually supports bcachefs before proceeding
+check_bcachefs_kernel
+
+# Refuse to run if any bcachefs filesystem is currently mounted in the live session
+if awk '$3=="bcachefs"{found=1; exit} END{exit !found}' /proc/self/mounts; then
+  echo "ERROR: One or more bcachefs filesystems are currently mounted:" >&2
+  awk '$3=="bcachefs"{printf "  - %s on %s\n", $1, $2}' /proc/self/mounts >&2 || true
+  echo "Please unmount them before running this installer (findmnt -t bcachefs; umount -R <mountpoint>)." >&2
+  exit 1
+fi
+
+# Environment diagnostics/warnings
+if command -v systemd-detect-virt >/dev/null 2>&1 && systemd-detect-virt --container --quiet; then
+  echo "WARNING: Running inside a container. Block device access, module loading, or efivars may not work." >&2
+fi
+if [ ! -d /sys/firmware/efi/efivars ]; then
+  echo "NOTE: UEFI efivars not available; NVRAM enrollment may be skipped by systemd-boot." >&2
+fi
 
 # Prompt helpers
 read_default() {
@@ -62,6 +116,13 @@ if command -v openssl >/dev/null 2>&1; then
   done
 else
   echo "Warning: openssl not found; user '$USERNAME' will be created without a password. You can set it after first boot." >&2
+fi
+
+# Prepare Nix line for initialHashedPassword with quotes preserved
+HASH_LINE=""
+if [ -n "${USER_HASH}" ]; then
+  ESC_HASH=${USER_HASH//\"/\\\"}
+  HASH_LINE="    initialHashedPassword = \"${ESC_HASH}\";"
 fi
 
 # Disk selection
@@ -106,19 +167,30 @@ fi
 # Final confirmation
 echo
 echo "WARNING: This will destroy ALL data on $DISK"
+# Note about benign tool noise during mounting/config generation
+cat <<'NOTE'
+INFO: During the mounting/config generation phase, you may see messages like:
+  "ERROR: not a btrfs filesystem: /mnt/..."
+These come from btrfs tools probing paths while we are installing to bcachefs.
+They are harmless and can be safely ignored for this installer.
+NOTE
 read -r -p "Type 'INSTALL' to proceed: " confirm
 [ "$confirm" = "INSTALL" ] || { echo "Aborted"; exit 1; }
 
 # Ensure not mounted
-mount | grep -E "^$DISK" && { echo "Device appears mounted. Unmount first." >&2; exit 1; } || true
+if mount | grep -Eq "^$DISK"; then
+  echo "Device appears mounted. Unmount first." >&2
+  exit 1
+fi
 
 # Partition
-echo "\nPartitioning $DISK ..."
+printf '\nPartitioning %s ...\n' "$DISK"
 wipefs -af "$DISK"
 parted -s "$DISK" mklabel gpt
 parted -s "$DISK" mkpart ESP fat32 1MiB 1025MiB
 parted -s "$DISK" set 1 esp on
-parted -s "$DISK" mkpart primary bcachefs 1025MiB 100%
+parted -s "$DISK" mkpart primary 1025MiB 100%
+parted -s "$DISK" name 2 nixos
 
 # Derive partition names
 P1="$DISK"1
@@ -128,19 +200,59 @@ if [[ "$DISK" == *nvme* ]] || [[ "$DISK" == *mmcblk* ]]; then
 fi
 
 # Filesystems
-echo "\nCreating filesystems ..."
+printf '\nCreating filesystems ...\n'
 mkfs.fat -F32 -n EFI "$P1"
 mkfs.bcachefs -f --compression=zstd -L nixos "$P2"
+# Allow udev to create by-uuid symlinks before we use them
+if command -v udevadm >/dev/null 2>&1; then
+  udevadm settle || true
+fi
+
+# Subvolumes
+printf '\nCreating subvolumes ...\n'
+mkdir -p /mnt
+mount -t bcachefs "$P2" /mnt
+# Use simple names (avoid '@' to prevent tooling confusion)
+bcachefs subvolume create /mnt/root
+bcachefs subvolume create /mnt/home
+bcachefs subvolume create /mnt/nix
+bcachefs subvolume create /mnt/var
+bcachefs subvolume create /mnt/var-log
+bcachefs subvolume create /mnt/var-cache
+bcachefs subvolume create /mnt/var-tmp
+bcachefs subvolume create /mnt/var-lib
+umount /mnt
 
 # Mount target
-echo "\nMounting target ..."
-mkdir -p /mnt
-mount -o noatime "$P2" /mnt
-mkdir -p /mnt/{home,nix,boot,.snapshots}
+printf '\nMounting target ...\n'
+FSUUID=$(blkid -s UUID -o value "$P2")
+BOOTUUID=$(blkid -s UUID -o value "$P1")
+DEV="/dev/disk/by-uuid/$FSUUID"
+if [ ! -e "$DEV" ]; then
+  DEV="$P2"
+fi
+# Helper to mount a bcachefs subvolume with broad compatibility
+mount_subvol() {
+  local name="$1" target="$2" extra="${3:-}"
+  mount -t bcachefs -o "noatime${extra:+,$extra},subvolume=${name}" "$DEV" "$target" 2>/dev/null || \
+  mount -t bcachefs -o "noatime${extra:+,$extra},subvol=${name}" "$DEV" "$target"
+}
+# Mount root subvolume directly
+mount -t bcachefs -o noatime,subvolume=root "$DEV" /mnt || mount -t bcachefs -o noatime,subvol=root "$DEV" /mnt
+# Create mount points under root
+mkdir -p /mnt/{home,nix,boot,var,var/log,var/cache,var/tmp,var/lib}
+# Mount remaining subvolumes directly by name
+mount_subvol home /mnt/home
+mount_subvol nix /mnt/nix
+mount_subvol var-log /mnt/var/log nodev,noexec
+mount_subvol var-cache /mnt/var/cache nodev,noexec
+mount_subvol var-tmp /mnt/var/tmp
+mount_subvol var-lib /mnt/var/lib
+# EFI system partition
 mount "$P1" /mnt/boot
 
-# Generate hardware config
-nixos-generate-config --root /mnt
+# Generate hardware config (skip auto filesystems; we'll declare them explicitly)
+nixos-generate-config --root /mnt --no-filesystems
 
 # Write configuration.nix
 CFG=/mnt/etc/nixos/configuration.nix
@@ -151,6 +263,7 @@ cat > "$CFG" <<NIXCONF
 
   boot = {
     supportedFilesystems = [ "bcachefs" ];
+    initrd.supportedFilesystems = [ "bcachefs" ];
     loader = {
       systemd-boot.enable = true;
       efi.canTouchEfiVariables = true;
@@ -162,6 +275,50 @@ cat > "$CFG" <<NIXCONF
       "zswap.max_pool_percent=20"
       "zswap.zpool=z3fold"
     ];
+  };
+
+  # Declare filesystems explicitly for bcachefs subvolumes
+  fileSystems = {
+    "/" = {
+      device = "/dev/disk/by-uuid/${FSUUID}";
+      fsType = "bcachefs";
+      options = [ "noatime" "subvolume=root" ];
+    };
+    "/home" = {
+      device = "/dev/disk/by-uuid/${FSUUID}";
+      fsType = "bcachefs";
+      options = [ "noatime" "subvolume=home" ];
+    };
+    "/nix" = {
+      device = "/dev/disk/by-uuid/${FSUUID}";
+      fsType = "bcachefs";
+      options = [ "noatime" "subvolume=nix" ];
+    };
+    "/var/log" = {
+      device = "/dev/disk/by-uuid/${FSUUID}";
+      fsType = "bcachefs";
+      options = [ "noatime" "nodev" "noexec" "subvolume=\"var-log\"" ];
+    };
+    "/var/cache" = {
+      device = "/dev/disk/by-uuid/${FSUUID}";
+      fsType = "bcachefs";
+      options = [ "noatime" "nodev" "noexec" "subvolume=\"var-cache\"" ];
+    };
+    "/var/tmp" = {
+      device = "/dev/disk/by-uuid/${FSUUID}";
+      fsType = "bcachefs";
+      options = [ "noatime" "subvolume=\"var-tmp\"" ];
+    };
+    "/var/lib" = {
+      device = "/dev/disk/by-uuid/${FSUUID}";
+      fsType = "bcachefs";
+      options = [ "noatime" "subvolume=\"var-lib\"" ];
+    };
+    "/boot" = {
+      device = "/dev/disk/by-uuid/${BOOTUUID}";
+      fsType = "vfat";
+      options = [ "fmask=0022" "dmask=0022" ];
+    };
   };
 
   networking = {
@@ -176,7 +333,7 @@ cat > "$CFG" <<NIXCONF
   users.users.${USERNAME} = {
     isNormalUser = true;
     extraGroups = [ "wheel" "networkmanager" "input" ];
-    ${USER_HASH:+initialHashedPassword = "${USER_HASH}";}
+${HASH_LINE:+${HASH_LINE}}
   };
 
   environment.systemPackages = with pkgs; [
@@ -192,7 +349,10 @@ cat > "$CFG" <<NIXCONF
   services.fstrim.enable = true;
 
   nixpkgs.config.allowUnfree = true;
-  nix.settings.experimental-features = [ "nix-command" "flakes" ];
+  nix.settings = {
+    experimental-features = [ "nix-command" "flakes" ];
+    accept-flake-config = true;
+  };
 
   security.sudo = {
     enable = true;
@@ -203,10 +363,10 @@ cat > "$CFG" <<NIXCONF
 }
 NIXCONF
 
-echo "\nConfiguration written to $CFG"
+printf '\nConfiguration written to %s\n' "$CFG"
 
-echo "\nStarting installation (you will be prompted to set the root password) ..."
+printf '\nStarting installation (you will be prompted to set the root password) ...\n'
 nixos-install
 
-echo "\nInstallation complete. You can reboot into the installed system."
+printf '\nInstallation complete. You can reboot into the installed system.\n'
 

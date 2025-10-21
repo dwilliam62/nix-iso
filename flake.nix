@@ -28,7 +28,43 @@
       };
     in
     {
-      formatter.${system} = nixpkgs.legacyPackages.${system}.nixfmt-rfc-style;
+      formatter.${system} =
+        let
+          pkgs = nixpkgs.legacyPackages.${system};
+        in
+        pkgs.writeShellApplication {
+          name = "nix-iso-fmt";
+          runtimeInputs = [
+            pkgs.git
+            pkgs.nixfmt-rfc-style
+            pkgs.findutils
+            pkgs.gnugrep
+            pkgs.coreutils
+          ];
+          text = ''
+            set -euo pipefail
+            # Format only tracked .nix files to avoid traversing large/untracked trees
+            fmt_one() {
+              local f="$1"
+              [ -f "$f" ] || return 0
+              local tmp
+              tmp=$(mktemp)
+              if cat "$f" | nixfmt -f "$f" >"$tmp"; then
+                mv "$tmp" "$f"
+              else
+                rm -f "$tmp"
+                echo "nixfmt failed on: $f" >&2
+                return 1
+              fi
+            }
+            if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+              git ls-files -z -- '*.nix' 2>/dev/null | while IFS= read -r -d $'\0' f; do fmt_one "$f"; done
+            else
+              # Fallback: find *.nix in cwd
+              find . -type f -name '*.nix' -print0 2>/dev/null | while IFS= read -r -d $'\0' f; do fmt_one "$f"; done
+            fi
+          '';
+        };
 
       ## GNOME ISO ##
       nixosConfigurations.nixos-gnome = nixpkgs.lib.nixosSystem {

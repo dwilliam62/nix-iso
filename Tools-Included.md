@@ -1,3 +1,5 @@
+English | [Español](./Tools-Included.es.md)
+
 # Live ISO Toolset (included in all profiles)
 
 This document lists the tooling included on all ISO profiles (minimal, GNOME, COSMIC), grouped by category.
@@ -22,6 +24,8 @@ Storage / Filesystems
 - btrfs-progs, e2fsprogs, xfsprogs
 - bcachefs-tools
 - ntfs3g, exfatprogs, dosfstools (mkfs.fat)
+- nfs-utils, cifs-utils (NFS/SMB mounts)
+- ZFS userland via boot.zfs.package (zpool, zfs)
 - cryptsetup, lvm2, mdadm
 
 Recovery / Imaging / Archiving

@@ -1,3 +1,5 @@
+English | [Español](./README.es.md)
+
 # Filesystem installer scripts
 
 These scripts perform interactive, opinionated NixOS installations for multiple filesystems. They are designed to be run from the live ISO or any environment with the needed tools available.
