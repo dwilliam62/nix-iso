@@ -4,7 +4,7 @@ Created: 2025-08-27
 Project: https://github.com/dwilliam62/nix-iso
 -->
 
-English | Español (TBD)
+English | [Español](./project-guide.es.md)
 
 # Project Guide — nix-iso: Custom NixOS Install/Recovery ISOs
 

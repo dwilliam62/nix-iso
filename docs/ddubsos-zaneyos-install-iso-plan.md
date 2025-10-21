@@ -4,6 +4,8 @@ Created: 2025-08-27
 Project: https://github.com/dwilliam62/nix-iso
 -->
 
+English | [Español](./ddubsos-zaneyos-install-iso-plan.es.md)
+
 # Plan: One-step installer ISOs for zaneyos (25.05) and ddubsos (25.11)
 
 Goal
