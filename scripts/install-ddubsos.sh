@@ -310,6 +310,9 @@ if [ -f "$DDUBS_LOCAL/hosts/$HOSTNAME/hardware.nix" ]; then
   merge_nfs_mount "$DDUBS_LOCAL/hosts/$HOSTNAME/hardware.nix" "$HOST_DIR/hardware.nix"
 fi
 
+# Ensure the staged flake is treated as a path, not a git repo (so our new host is visible)
+rm -rf "$DDUBS_TARGET_ROOT/.git" "$DDUBS_TARGET_ROOT/.gitmodules" 2>/dev/null || true
+
 # Note: flake provides default username; optionally update later if needed.
 
 # Set hostname in NixOS hardware or leave to flake modules; ddubsos modules set networking settings elsewhere
