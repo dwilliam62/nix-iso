@@ -31,7 +31,7 @@ export PATH
 
 # Dependencies we will use conditionally per-filesystem as well
 req() { command -v "$1" >/dev/null 2>&1 || { echo "Missing dependency: $1" >&2; exit 1; }; }
-for dep in lsblk parted mkfs.fat mount umount sed awk tee grep tr cut head tail wc nixos-generate-config nixos-install blkid; do
+for dep in lsblk parted mkfs.fat mount umount sed awk tee grep tr cut head tail wc nixos-generate-config nixos-install blkid wipefs; do
   req "$dep"
 done
 
@@ -49,6 +49,12 @@ read_default() {
 
 press_enter() { read -r -p "Press Enter to continue..." _ || true; }
 
+
+# Detect if any mountpoints exist under a disk (disk or its partitions)
+any_mounts_under() {
+  local d="$1"
+  lsblk -rno MOUNTPOINTS "$d" 2>/dev/null | awk '($0!="" && $0!="-") {found=1; exit} END{exit !found}'
+}
 
 # Disk selection helper (single disk)
 select_disk() {
@@ -92,6 +98,11 @@ select_disk() {
       exit 1
     fi
   fi
+  # Show current mounts for transparency
+  echo
+  echo "Current mounts under $disk:"
+  lsblk -rno NAME,MOUNTPOINTS "$disk" | sed 's/^/  /'
+  echo
   echo "$disk"
 }
 
@@ -241,9 +252,10 @@ echo "WARNING: This will destroy ALL data on $DISK"
 read -r -p "Type 'INSTALL' to proceed: " ok
 [ "$ok" = "INSTALL" ] || { echo "Aborted"; exit 1; }
 
-# Ensure not mounted
-if mount | grep -Eq "^$DISK"; then
-  echo "Device appears mounted. Unmount first." >&2
+# Ensure the selected disk (and its partitions) are not mounted
+if any_mounts_under "$DISK"; then
+  echo "Device appears mounted (or has mounted partitions). Unmount first." >&2
+  lsblk -rno NAME,MOUNTPOINTS "$DISK" | sed 's/^/  /' >&2 || true
   exit 1
 fi
 
