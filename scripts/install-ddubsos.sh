@@ -31,7 +31,7 @@ export PATH
 
 # Dependencies we will use conditionally per-filesystem as well
 req() { command -v "$1" >/dev/null 2>&1 || { echo "Missing dependency: $1" >&2; exit 1; }; }
-for dep in lsblk parted mkfs.fat mount umount sed awk tee grep tr cut head tail wc nixos-generate-config nixos-install blkid wipefs; do
+for dep in lsblk parted mkfs.fat mount umount sed awk tee grep tr cut head tail wc nixos-generate-config nixos-install blkid wipefs openssl rsync; do
   req "$dep"
 done
 
@@ -234,6 +234,24 @@ echo "=== ddubsOS Installer (flake) ==="
 HOSTNAME=$(read_default "Hostname" "nixos")
 USERNAME=$(read_default "Username" "dwilliams")
 
+# Prompt for user password (for the installed user account)
+USER_HASH=""
+if command -v openssl >/dev/null 2>&1; then
+  while true; do
+    read -rs -p "Password for user '$USERNAME': " USER_PW1; echo >&2
+    read -rs -p "Confirm password for '$USERNAME': " USER_PW2; echo >&2
+    if [ "$USER_PW1" != "$USER_PW2" ]; then
+      echo "Passwords do not match. Please try again." >&2
+      continue
+    fi
+    USER_HASH=$(printf %s "$USER_PW1" | openssl passwd -6 -stdin)
+    unset USER_PW1 USER_PW2
+    break
+  done
+else
+  echo "Warning: openssl not found; user '$USERNAME' will be created without a password. You can set it after first boot." >&2
+fi
+
 # Filesystem selection
 echo
 echo "Select filesystem:"
@@ -310,8 +328,28 @@ if [ -f "$DDUBS_LOCAL/hosts/$HOSTNAME/hardware.nix" ]; then
   merge_nfs_mount "$DDUBS_LOCAL/hosts/$HOSTNAME/hardware.nix" "$HOST_DIR/hardware.nix"
 fi
 
+# If running in a VM, force SDDM Wayland to true for this host (SDDM X11 often fails in VMs)
+if command -v systemd-detect-virt >/dev/null 2>&1 && systemd-detect-virt --vm --quiet; then
+  VARS_FILE="$HOST_DIR/variables.nix"
+  if [ -f "$VARS_FILE" ]; then
+    # Replace existing attribute if present
+    if grep -qE '^[[:space:]]*sddmWaylandEnable[[:space:]]*=' "$VARS_FILE"; then
+      sed -i -E 's/^[[:space:]]*sddmWaylandEnable[[:space:]]*=.*/  sddmWaylandEnable = true;/' "$VARS_FILE" || true
+    else
+      # Append before the closing brace
+      sed -i -E 's/^[[:space:]]*}\s*$/  sddmWaylandEnable = true;\n}/' "$VARS_FILE" || true
+    fi
+  fi
+fi
+
 # Ensure the staged flake is treated as a path, not a git repo (so our new host is visible)
 rm -rf "$DDUBS_TARGET_ROOT/.git" "$DDUBS_TARGET_ROOT/.gitmodules" 2>/dev/null || true
+
+# Also place a working copy in the future user's home for convenient edits post-install
+USR_HOME_DIR="/mnt/home/$USERNAME"
+mkdir -p "$USR_HOME_DIR"
+rm -rf "$USR_HOME_DIR/ddubsos"
+rsync -a --delete "$DDUBS_TARGET_ROOT/" "$USR_HOME_DIR/ddubsos/"
 
 # Note: flake provides default username; optionally update later if needed.
 
@@ -322,6 +360,12 @@ echo
 echo "Starting installation from ddubsos flake for host '$HOSTNAME' ..."
 # Pass accept-flake-config to avoid prompts in environments without matching nix.conf
 nixos-install --flake "$DDUBS_TARGET_ROOT#$HOSTNAME" --option accept-flake-config true
+
+# Post-install: set the user's password if provided and fix ownership of ~/ddubsos
+if [ -n "$USER_HASH" ]; then
+  chroot /mnt /bin/sh -c "echo '${USERNAME}:${USER_HASH}' | chpasswd -e" || true
+fi
+chroot /mnt /bin/sh -c "id -u '${USERNAME}' >/dev/null 2>&1 && chown -R '${USERNAME}:${USERNAME}' '/home/${USERNAME}/ddubsos' || true"
 
 echo
 echo "Installation complete. You can reboot into the installed system."
