@@ -378,7 +378,7 @@ nixos-install --flake "$DDUBS_TARGET_ROOT#$HOSTNAME" --option accept-flake-confi
 if [ -n "$USER_HASH" ]; then
   run_in_target "echo '${USERNAME}:${USER_HASH}' | chpasswd -e" || true
 fi
-run_in_target "id -u '${USERNAME}' >/dev/null 2>&1 && chown -R '${USERNAME}:${USERNAME}' '/home/${USERNAME}/ddubsos'" || true
+run_in_target "if id -u '${USERNAME}' >/dev/null 2>&1; then G=\$(id -gn '${USERNAME}'); chown -R '${USERNAME}':\"$G\" '/home/${USERNAME}/ddubsos'; fi" || true
 
 echo
 echo "Installation complete. You can reboot into the installed system."
