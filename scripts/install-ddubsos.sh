@@ -105,12 +105,7 @@ select_disk() {
       exit 1
     fi
   fi
-  # Show current mounts for transparency (to stderr)
-  echo >&2
-  echo "Current mounts under $disk:" >&2
-  lsblk -rno NAME,MOUNTPOINTS "$disk" | sed 's/^/  /' >&2 || true
-  echo >&2
-  # Return the selected disk on stdout only
+# Return the selected disk on stdout only
   echo "$disk"
 }
 
@@ -315,12 +310,7 @@ if [ -f "$DDUBS_LOCAL/hosts/$HOSTNAME/hardware.nix" ]; then
   merge_nfs_mount "$DDUBS_LOCAL/hosts/$HOSTNAME/hardware.nix" "$HOST_DIR/hardware.nix"
 fi
 
-# Update username in the staged flake (specialArgs default)
-FLAKE_FILE="$DDUBS_TARGET_ROOT/flake.nix"
-if [ -f "$FLAKE_FILE" ]; then
-  # Replace the top-level default username = "..."; keeping formatting tolerant
-  sed -i -E "s/^([[:space:]]*username[[:space:]]*=[[:space:]]*")([^"]+)("[[:space:]]*;)/\1$USERNAME\3/" "$FLAKE_FILE" || true
-fi
+# Note: flake provides default username; optionally update later if needed.
 
 # Set hostname in NixOS hardware or leave to flake modules; ddubsos modules set networking settings elsewhere
 
