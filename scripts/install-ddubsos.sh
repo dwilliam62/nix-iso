@@ -116,11 +116,24 @@ part_names_for_disk() {
   echo "$p1 $p2"
 }
 
+# Helper to run a command inside the target system reliably
+run_in_target() {
+  local cmd="$*"
+  if [ -x /mnt/run/current-system/sw/bin/sh ]; then
+    chroot /mnt /run/current-system/sw/bin/sh -lc "$cmd"
+  elif command -v nixos-enter >/dev/null 2>&1; then
+    nixos-enter --root /mnt -- sh -lc "$cmd"
+  else
+    echo "Warning: could not find target shell; skipping: $cmd" >&2
+    return 1
+  fi
+}
+
 # Format/mount for each filesystem
 prep_btrfs() {
   req mkfs.btrfs; req btrfs
   local disk="$1"
-  echo "\nPartitioning $disk ..."
+printf '\nPartitioning %s ...\n' "$disk"
   wipefs -af "$disk"
   parted -s "$disk" mklabel gpt
   parted -s "$disk" mkpart ESP fat32 1MiB 1025MiB
@@ -130,10 +143,10 @@ parted -s "$disk" mkpart primary btrfs 1025MiB 100%
   command -v partprobe >/dev/null 2>&1 && partprobe "$disk" || true
   command -v udevadm >/dev/null 2>&1 && udevadm settle || sleep 1
   read -r P1 P2 < <(part_names_for_disk "$disk")
-  echo "\nCreating filesystems ..."
+printf '\nCreating filesystems ...\n'
   mkfs.fat -F32 -n EFI "$P1"
   mkfs.btrfs -f -L nixos "$P2"
-  echo "\nCreating subvolumes ..."
+printf '\nCreating subvolumes ...\n'
   mkdir -p /mnt
   mount -o subvolid=5 "$P2" /mnt
   btrfs subvolume create /mnt/@
@@ -141,7 +154,7 @@ parted -s "$disk" mkpart primary btrfs 1025MiB 100%
   btrfs subvolume create /mnt/@nix
   btrfs subvolume create /mnt/@snapshots
   umount /mnt
-  echo "\nMounting target ..."
+printf '\nMounting target ...\n'
   mount -o compress=zstd,discard=async,noatime,subvol=@ "$P2" /mnt
   mkdir -p /mnt/{home,nix,boot,.snapshots}
   mount -o compress=zstd,discard=async,noatime,subvol=@home "$P2" /mnt/home
@@ -153,7 +166,7 @@ parted -s "$disk" mkpart primary btrfs 1025MiB 100%
 prep_ext4() {
   req mkfs.ext4
   local disk="$1"
-  echo "\nPartitioning $disk ..."
+printf '\nPartitioning %s ...\n' "$disk"
   wipefs -af "$disk"
   parted -s "$disk" mklabel gpt
   parted -s "$disk" mkpart ESP fat32 1MiB 1025MiB
@@ -165,7 +178,7 @@ parted -s "$disk" mkpart primary ext4 1025MiB 100%
   echo "\nCreating filesystems ..."
   mkfs.fat -F32 -n EFI "$P1"
   mkfs.ext4 -F -L nixos "$P2"
-  echo "\nMounting target ..."
+printf '\nMounting target ...\n'
   mkdir -p /mnt
   mount -o noatime "$P2" /mnt
   mkdir -p /mnt/{home,nix,boot,.snapshots}
@@ -175,7 +188,7 @@ parted -s "$disk" mkpart primary ext4 1025MiB 100%
 prep_xfs() {
   req mkfs.xfs
   local disk="$1"
-  echo "\nPartitioning $disk ..."
+printf '\nPartitioning %s ...\n' "$disk"
   wipefs -af "$disk"
   parted -s "$disk" mklabel gpt
   parted -s "$disk" mkpart ESP fat32 1MiB 1025MiB
@@ -187,7 +200,7 @@ parted -s "$disk" mkpart primary xfs 1025MiB 100%
   echo "\nCreating filesystems ..."
   mkfs.fat -F32 -n EFI "$P1"
   mkfs.xfs -f -L nixos "$P2"
-  echo "\nMounting target ..."
+printf '\nMounting target ...\n'
   mkdir -p /mnt
   mount -o noatime "$P2" /mnt
   mkdir -p /mnt/{home,nix,boot,.snapshots}
@@ -363,9 +376,9 @@ nixos-install --flake "$DDUBS_TARGET_ROOT#$HOSTNAME" --option accept-flake-confi
 
 # Post-install: set the user's password if provided and fix ownership of ~/ddubsos
 if [ -n "$USER_HASH" ]; then
-  chroot /mnt /bin/sh -c "echo '${USERNAME}:${USER_HASH}' | chpasswd -e" || true
+  run_in_target "echo '${USERNAME}:${USER_HASH}' | chpasswd -e" || true
 fi
-chroot /mnt /bin/sh -c "id -u '${USERNAME}' >/dev/null 2>&1 && chown -R '${USERNAME}:${USERNAME}' '/home/${USERNAME}/ddubsos' || true"
+run_in_target "id -u '${USERNAME}' >/dev/null 2>&1 && chown -R '${USERNAME}:${USERNAME}' '/home/${USERNAME}/ddubsos'" || true
 
 echo
 echo "Installation complete. You can reboot into the installed system."
