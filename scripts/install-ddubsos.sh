@@ -49,52 +49,48 @@ read_default() {
 
 press_enter() { read -r -p "Press Enter to continue..." _ || true; }
 
-# Return 0 if any mountpoints exist under the given disk (disk or its partitions)
-any_mounts_under() {
-  local d="$1"
-  lsblk -rno MOUNTPOINTS "$d" 2>/dev/null | awk '($0!="" && $0!="-") {found=1; exit} END{exit !found}'
-}
 
 # Disk selection helper (single disk)
 select_disk() {
   echo
-  echo "Scanning for available, unmounted disks ..."
-  mapfile -t ALL_DISKS < <(lsblk -dn -o NAME,TYPE | awk '$2=="disk"{print $1}')
-  local avail_names=()
-  local avail_sizes=()
-  local avail_models=()
-  for name in "${ALL_DISKS[@]}"; do
-    # Skip if any mountpoints exist under this disk (e.g., live USB)
-if any_mounts_under "/dev/$name"; then
-      continue
-    fi
-    avail_names+=("$name")
-    avail_sizes+=("$(lsblk -dn -o SIZE "/dev/$name")")
-    avail_models+=("$(lsblk -dn -o MODEL "/dev/$name" 2>/dev/null | sed 's/^$/-/')")
-  done
-  if [ "${#avail_names[@]}" -eq 0 ]; then
-    echo "No completely unmounted disks found." >&2
-    echo "Hint: the USB you booted from is excluded; select an internal drive." >&2
-    return 1
+  echo "Available disks:"
+  # Build a numbered list for safer selection (handles virtio: vda)
+  mapfile -t DISK_ROWS < <(lsblk -dn -o NAME,SIZE,TYPE,MODEL | awk '$3=="disk" {m=$4; if (m=="") m="-"; printf "%s\t%s\t%s\n", $1,$2,m}')
+  if [ "${#DISK_ROWS[@]}" -eq 0 ]; then
+    echo "No disks detected. Are you running in a VM without storage, or missing permissions?" >&2
+    exit 1
   fi
   local idx=1
-  for i in "${!avail_names[@]}"; do
-    printf "[%d] /dev/%s  %s  %s\n" "$idx" "${avail_names[$i]}" "${avail_sizes[$i]}" "${avail_models[$i]}"
+  for row in "${DISK_ROWS[@]}"; do
+    local name size model
+    name=$(echo "$row" | awk '{print $1}')
+    size=$(echo "$row" | awk '{print $2}')
+    model=$(echo "$row" | awk '{print $3}')
+    printf "[%d] /dev/%s  %s  %s\n" "$idx" "$name" "$size" "$model"
     idx=$((idx+1))
   done
   echo
-  read -r -p "Select disk by number (1-${#avail_names[@]}) or enter device path (/dev/sdX, /dev/vdX, /dev/nvmeXnY): " choice
+  read -r -p "Select disk by number (1-${#DISK_ROWS[@]}) or enter device path (/dev/sdX, /dev/vdX, /dev/nvmeXnY): " choice
   local disk
   if [[ "$choice" =~ ^/dev/ ]]; then
     disk="$choice"
-  elif [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "${#avail_names[@]}" ]; then
-    disk="/dev/${avail_names[$((choice-1))]}"
+  elif [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "${#DISK_ROWS[@]}" ]; then
+    local sel_row sel_name
+    sel_row="${DISK_ROWS[$((choice-1))]}"
+    sel_name=$(echo "$sel_row" | awk '{print $1}')
+    disk="/dev/$sel_name"
   else
-    echo "Invalid selection: $choice" >&2; exit 1
+    echo "Invalid selection: $choice" >&2
+    exit 1
   fi
   [ -b "$disk" ] || { echo "Not a block device: $disk" >&2; exit 1; }
-  if command -v blockdev >/dev/null 2>&1 && [ "$(blockdev --getro "$disk" || echo 1)" != 0 ]; then
-    echo "Device appears read-only: $disk" >&2; exit 1
+  if command -v blockdev >/dev/null 2>&1; then
+    local ro
+    ro=$(blockdev --getro "$disk" || echo 1)
+    if [ "$ro" != "0" ]; then
+      echo "Device appears read-only: $disk (blockdev --getro != 0). Check VM settings and permissions." >&2
+      exit 1
+    fi
   fi
   echo "$disk"
 }
@@ -115,9 +111,9 @@ prep_btrfs() {
   parted -s "$disk" mklabel gpt
   parted -s "$disk" mkpart ESP fat32 1MiB 1025MiB
   parted -s "$disk" set 1 esp on
-parted -s "$DISK" mkpart primary btrfs 1025MiB 100%
+parted -s "$disk" mkpart primary btrfs 1025MiB 100%
   # Ensure the kernel has created partition nodes
-  command -v partprobe >/dev/null 2>&1 && partprobe "$DISK" || true
+  command -v partprobe >/dev/null 2>&1 && partprobe "$disk" || true
   command -v udevadm >/dev/null 2>&1 && udevadm settle || sleep 1
   read -r P1 P2 < <(part_names_for_disk "$disk")
   echo "\nCreating filesystems ..."
@@ -148,8 +144,8 @@ prep_ext4() {
   parted -s "$disk" mklabel gpt
   parted -s "$disk" mkpart ESP fat32 1MiB 1025MiB
   parted -s "$disk" set 1 esp on
-parted -s "$DISK" mkpart primary ext4 1025MiB 100%
-  command -v partprobe >/dev/null 2>&1 && partprobe "$DISK" || true
+parted -s "$disk" mkpart primary ext4 1025MiB 100%
+  command -v partprobe >/dev/null 2>&1 && partprobe "$disk" || true
   command -v udevadm >/dev/null 2>&1 && udevadm settle || sleep 1
   read -r P1 P2 < <(part_names_for_disk "$disk")
   echo "\nCreating filesystems ..."
@@ -170,8 +166,8 @@ prep_xfs() {
   parted -s "$disk" mklabel gpt
   parted -s "$disk" mkpart ESP fat32 1MiB 1025MiB
   parted -s "$disk" set 1 esp on
-parted -s "$DISK" mkpart primary xfs 1025MiB 100%
-  command -v partprobe >/dev/null 2>&1 && partprobe "$DISK" || true
+parted -s "$disk" mkpart primary xfs 1025MiB 100%
+  command -v partprobe >/dev/null 2>&1 && partprobe "$disk" || true
   command -v udevadm >/dev/null 2>&1 && udevadm settle || sleep 1
   read -r P1 P2 < <(part_names_for_disk "$disk")
   echo "\nCreating filesystems ..."
@@ -245,10 +241,9 @@ echo "WARNING: This will destroy ALL data on $DISK"
 read -r -p "Type 'INSTALL' to proceed: " ok
 [ "$ok" = "INSTALL" ] || { echo "Aborted"; exit 1; }
 
-# Ensure the selected disk (and its partitions) are not mounted
-if any_mounts_under "$DISK"; then
-  echo "Device appears mounted (or has mounted partitions). Unmount first." >&2
-  lsblk -n -o NAME,MOUNTPOINTS "$DISK" >&2 || true
+# Ensure not mounted
+if mount | grep -Eq "^$DISK"; then
+  echo "Device appears mounted. Unmount first." >&2
   exit 1
 fi
 
