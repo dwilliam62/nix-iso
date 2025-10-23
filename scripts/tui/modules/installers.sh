@@ -22,6 +22,10 @@ _add_installer_item() {
 # Group: Standard installers
 register_header installers "Standard installers"
 _add_installer_item \
+  ddubsos \
+  "Install ddubsOS (select FS, disk; flake-based)" \
+  "$SCRIPT_DIR/install-ddubsos.sh"
+_add_installer_item \
   btrfs \
   "Install NixOS on Btrfs" \
   "install-btrfs.sh"
@@ -41,4 +45,3 @@ _add_installer_item \
   "Install NixOS on Btrfs Mirror" \
   "install-btrfs-boot-mirror.sh" \
   "Testing - not for production use"
-
