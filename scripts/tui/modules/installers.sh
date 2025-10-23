@@ -24,7 +24,7 @@ register_header installers "Standard installers"
 _add_installer_item \
   ddubsos \
   "Install ddubsOS (select FS, disk; flake-based)" \
-  "$SCRIPT_DIR/install-ddubsos.sh"
+  "[ -x /home/dwilliams/Projects/ddubs/nix-iso/scripts/install-ddubsos.sh ] && /home/dwilliams/Projects/ddubs/nix-iso/scripts/install-ddubsos.sh || $SCRIPT_DIR/install-ddubsos.sh"
 _add_installer_item \
   btrfs \
   "Install NixOS on Btrfs" \
