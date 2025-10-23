@@ -49,6 +49,12 @@ read_default() {
 
 press_enter() { read -r -p "Press Enter to continue..." _ || true; }
 
+# Return 0 if any mountpoints exist under the given disk (disk or its partitions)
+any_mounts_under() {
+  local d="$1"
+  lsblk -rno MOUNTPOINTS "$d" 2>/dev/null | awk '($0!="" && $0!="-") {found=1; exit} END{exit !found}'
+}
+
 # Disk selection helper (single disk)
 select_disk() {
   echo
@@ -59,7 +65,7 @@ select_disk() {
   local avail_models=()
   for name in "${ALL_DISKS[@]}"; do
     # Skip if any mountpoints exist under this disk (e.g., live USB)
-    if lsblk -n -o MOUNTPOINTS "/dev/$name" | grep -q "[^[:space:]]"; then
+if any_mounts_under "/dev/$name"; then
       continue
     fi
     avail_names+=("$name")
@@ -109,7 +115,10 @@ prep_btrfs() {
   parted -s "$disk" mklabel gpt
   parted -s "$disk" mkpart ESP fat32 1MiB 1025MiB
   parted -s "$disk" set 1 esp on
-  parted -s "$disk" mkpart primary btrfs 1025MiB 100%
+parted -s "$DISK" mkpart primary btrfs 1025MiB 100%
+  # Ensure the kernel has created partition nodes
+  command -v partprobe >/dev/null 2>&1 && partprobe "$DISK" || true
+  command -v udevadm >/dev/null 2>&1 && udevadm settle || sleep 1
   read -r P1 P2 < <(part_names_for_disk "$disk")
   echo "\nCreating filesystems ..."
   mkfs.fat -F32 -n EFI "$P1"
@@ -139,7 +148,9 @@ prep_ext4() {
   parted -s "$disk" mklabel gpt
   parted -s "$disk" mkpart ESP fat32 1MiB 1025MiB
   parted -s "$disk" set 1 esp on
-  parted -s "$disk" mkpart primary ext4 1025MiB 100%
+parted -s "$DISK" mkpart primary ext4 1025MiB 100%
+  command -v partprobe >/dev/null 2>&1 && partprobe "$DISK" || true
+  command -v udevadm >/dev/null 2>&1 && udevadm settle || sleep 1
   read -r P1 P2 < <(part_names_for_disk "$disk")
   echo "\nCreating filesystems ..."
   mkfs.fat -F32 -n EFI "$P1"
@@ -159,7 +170,9 @@ prep_xfs() {
   parted -s "$disk" mklabel gpt
   parted -s "$disk" mkpart ESP fat32 1MiB 1025MiB
   parted -s "$disk" set 1 esp on
-  parted -s "$disk" mkpart primary xfs 1025MiB 100%
+parted -s "$DISK" mkpart primary xfs 1025MiB 100%
+  command -v partprobe >/dev/null 2>&1 && partprobe "$DISK" || true
+  command -v udevadm >/dev/null 2>&1 && udevadm settle || sleep 1
   read -r P1 P2 < <(part_names_for_disk "$disk")
   echo "\nCreating filesystems ..."
   mkfs.fat -F32 -n EFI "$P1"
@@ -233,7 +246,7 @@ read -r -p "Type 'INSTALL' to proceed: " ok
 [ "$ok" = "INSTALL" ] || { echo "Aborted"; exit 1; }
 
 # Ensure the selected disk (and its partitions) are not mounted
-if lsblk -n -o MOUNTPOINTS "$DISK" | grep -q "[^[:space:]]"; then
+if any_mounts_under "$DISK"; then
   echo "Device appears mounted (or has mounted partitions). Unmount first." >&2
   lsblk -n -o NAME,MOUNTPOINTS "$DISK" >&2 || true
   exit 1
