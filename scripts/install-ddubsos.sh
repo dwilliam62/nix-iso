@@ -58,8 +58,8 @@ any_mounts_under() {
 
 # Disk selection helper (single disk)
 select_disk() {
-  echo
-  echo "Available disks:"
+  echo >&2
+  echo "Available disks:" >&2
   # Build a numbered list for safer selection (handles virtio: vda)
   mapfile -t DISK_ROWS < <(lsblk -dn -o NAME,SIZE,TYPE,MODEL | awk '$3=="disk" {m=$4; if (m=="") m="-"; printf "%s\t%s\t%s\n", $1,$2,m}')
   if [ "${#DISK_ROWS[@]}" -eq 0 ]; then
@@ -72,11 +72,18 @@ select_disk() {
     name=$(echo "$row" | awk '{print $1}')
     size=$(echo "$row" | awk '{print $2}')
     model=$(echo "$row" | awk '{print $3}')
-    printf "[%d] /dev/%s  %s  %s\n" "$idx" "$name" "$size" "$model"
+    printf "[%d] /dev/%s  %s  %s\n" "$idx" "$name" "$size" "$model" >&2
     idx=$((idx+1))
   done
-  echo
-  read -r -p "Select disk by number (1-${#DISK_ROWS[@]}) or enter device path (/dev/sdX, /dev/vdX, /dev/nvmeXnY): " choice
+  echo >&2
+  printf "Select disk by number (1-%d) or enter device path (/dev/sdX, /dev/vdX, /dev/nvmeXnY): " "${#DISK_ROWS[@]}" >&2
+  local choice
+  # Read from controlling terminal to avoid capturing prompts when using command substitution
+  if [ -t 0 ]; then
+    read -r choice
+  else
+    read -r choice </dev/tty
+  fi
   local disk
   if [[ "$choice" =~ ^/dev/ ]]; then
     disk="$choice"
@@ -98,11 +105,12 @@ select_disk() {
       exit 1
     fi
   fi
-  # Show current mounts for transparency
-  echo
-  echo "Current mounts under $disk:"
-  lsblk -rno NAME,MOUNTPOINTS "$disk" | sed 's/^/  /'
-  echo
+  # Show current mounts for transparency (to stderr)
+  echo >&2
+  echo "Current mounts under $disk:" >&2
+  lsblk -rno NAME,MOUNTPOINTS "$disk" | sed 's/^/  /' >&2 || true
+  echo >&2
+  # Return the selected disk on stdout only
   echo "$disk"
 }
 
