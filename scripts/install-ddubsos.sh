@@ -362,7 +362,8 @@ rm -rf "$DDUBS_TARGET_ROOT/.git" "$DDUBS_TARGET_ROOT/.gitmodules" 2>/dev/null ||
 USR_HOME_DIR="/mnt/home/$USERNAME"
 mkdir -p "$USR_HOME_DIR"
 rm -rf "$USR_HOME_DIR/ddubsos"
-rsync -a --delete "$DDUBS_TARGET_ROOT/" "$USR_HOME_DIR/ddubsos/"
+# Copy repo into user's future home; ownership fixed after install
+rsync -rlptD --delete "$DDUBS_TARGET_ROOT/" "$USR_HOME_DIR/ddubsos/"
 
 # Note: flake provides default username; optionally update later if needed.
 
@@ -378,7 +379,7 @@ nixos-install --flake "$DDUBS_TARGET_ROOT#$HOSTNAME" --option accept-flake-confi
 if [ -n "$USER_HASH" ]; then
   run_in_target "echo '${USERNAME}:${USER_HASH}' | chpasswd -e" || true
 fi
-run_in_target "if id -u '${USERNAME}' >/dev/null 2>&1; then G=\$(id -gn '${USERNAME}'); chown -R '${USERNAME}':\"$G\" '/home/${USERNAME}/ddubsos'; fi" || true
+run_in_target "if id -u '${USERNAME}' >/dev/null 2>&1; then install -d -m 0755 -o '${USERNAME}' -g \"\$(id -gn '${USERNAME}')\" '/home/${USERNAME}'; chown -R '${USERNAME}':\"\$(id -gn '${USERNAME}')\" '/home/${USERNAME}/ddubsos'; fi" || true
 
 echo
 echo "Installation complete. You can reboot into the installed system."
