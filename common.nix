@@ -5,9 +5,7 @@
   ...
 }:
 {
-  imports = [
-    inputs.chaotic.nixosModules.default
-  ];
+  imports = [ ];
 
   nixpkgs.config.allowUnfree = true;
   # Set environment variable for allowing non-free packages
@@ -43,7 +41,8 @@
   boot.kernelPackages = pkgs.linuxPackages_latest;
 
   # Remove ZFS/bcachefs special handling; keep common filesystems only
-  boot.supportedFilesystems = [
+  # Force this list to avoid installer modules pulling ZFS into the build
+  boot.supportedFilesystems = lib.mkForce [
     "btrfs"
     "vfat"
     "f2fs"
@@ -52,6 +51,17 @@
     "cifs"
     "ext4"
   ];
+  boot.initrd.supportedFilesystems = lib.mkForce [
+    "btrfs"
+    "vfat"
+    "f2fs"
+    "xfs"
+    "ntfs"
+    "cifs"
+    "ext4"
+  ];
+  # Ensure no out-of-tree modules (like ZFS) are injected by other modules
+  boot.extraModulePackages = lib.mkForce [ ];
 
   environment.systemPackages = with pkgs; [
     # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
