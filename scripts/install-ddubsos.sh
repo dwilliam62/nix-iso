@@ -52,23 +52,37 @@ press_enter() { read -r -p "Press Enter to continue..." _ || true; }
 # Disk selection helper (single disk)
 select_disk() {
   echo
-  echo "Available disks:"
-  mapfile -t DISK_ROWS < <(lsblk -dn -o NAME,SIZE,TYPE,MODEL | awk '$3=="disk" {m=$4; if (m=="") m="-"; printf "%s\t%s\t%s\n", $1,$2,m}')
-  if [ "${#DISK_ROWS[@]}" -eq 0 ]; then
-    echo "No disks detected." >&2; exit 1
+  echo "Scanning for available, unmounted disks ..."
+  mapfile -t ALL_DISKS < <(lsblk -dn -o NAME,TYPE | awk '$2=="disk"{print $1}')
+  local avail_names=()
+  local avail_sizes=()
+  local avail_models=()
+  for name in "${ALL_DISKS[@]}"; do
+    # Skip if any mountpoints exist under this disk (e.g., live USB)
+    if lsblk -n -o MOUNTPOINTS "/dev/$name" | grep -q "[^[:space:]]"; then
+      continue
+    fi
+    avail_names+=("$name")
+    avail_sizes+=("$(lsblk -dn -o SIZE "/dev/$name")")
+    avail_models+=("$(lsblk -dn -o MODEL "/dev/$name" 2>/dev/null | sed 's/^$/-/')")
+  done
+  if [ "${#avail_names[@]}" -eq 0 ]; then
+    echo "No completely unmounted disks found." >&2
+    echo "Hint: the USB you booted from is excluded; select an internal drive." >&2
+    return 1
   fi
   local idx=1
-  for row in "${DISK_ROWS[@]}"; do
-    printf "[%d] /dev/%s  %s  %s\n" "$idx" "$(echo "$row"|awk '{print $1}')" "$(echo "$row"|awk '{print $2}')" "$(echo "$row"|awk '{print $3}')"
+  for i in "${!avail_names[@]}"; do
+    printf "[%d] /dev/%s  %s  %s\n" "$idx" "${avail_names[$i]}" "${avail_sizes[$i]}" "${avail_models[$i]}"
     idx=$((idx+1))
   done
   echo
-  read -r -p "Select disk by number (1-${#DISK_ROWS[@]}) or enter device path (/dev/sdX, /dev/vdX, /dev/nvmeXnY): " choice
+  read -r -p "Select disk by number (1-${#avail_names[@]}) or enter device path (/dev/sdX, /dev/vdX, /dev/nvmeXnY): " choice
   local disk
   if [[ "$choice" =~ ^/dev/ ]]; then
     disk="$choice"
-  elif [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "${#DISK_ROWS[@]}" ]; then
-    disk="/dev/$(echo "${DISK_ROWS[$((choice-1))]}" | awk '{print $1}')"
+  elif [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "${#avail_names[@]}" ]; then
+    disk="/dev/${avail_names[$((choice-1))]}"
   else
     echo "Invalid selection: $choice" >&2; exit 1
   fi
@@ -218,8 +232,12 @@ echo "WARNING: This will destroy ALL data on $DISK"
 read -r -p "Type 'INSTALL' to proceed: " ok
 [ "$ok" = "INSTALL" ] || { echo "Aborted"; exit 1; }
 
-# Ensure not mounted
-if mount | grep -Eq "^$DISK"; then echo "Device appears mounted. Unmount first." >&2; exit 1; fi
+# Ensure the selected disk (and its partitions) are not mounted
+if lsblk -n -o MOUNTPOINTS "$DISK" | grep -q "[^[:space:]]"; then
+  echo "Device appears mounted (or has mounted partitions). Unmount first." >&2
+  lsblk -n -o NAME,MOUNTPOINTS "$DISK" >&2 || true
+  exit 1
+fi
 
 # Prep per filesystem
 case "$FS" in
