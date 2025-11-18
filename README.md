@@ -5,7 +5,7 @@ English | [Español](./README.es.md)
 ---
 
 <div align="center">
-  <img src="img/nixos-install-cosmic-gui-1.png" alt="Screenshot: NixOS installation using XFS in the COSMIC Desktop GUI" width="80%" />
+  <img src="https://raw.githubusercontent.com/dwilliam62/nix-iso/main/img/nixos-install-cosmic-gui-1.png" alt="Screenshot: NixOS installation using XFS in the COSMIC Desktop GUI" width="80%" />
   <br /><br>
   <em>Screenshot: NixOS installation using XFS in the COSMIC Desktop GUI</em>
 </div>
@@ -13,7 +13,7 @@ English | [Español](./README.es.md)
 <br><br><br>
 
 <div align="center">
-  <img src="img/nixos-install-cosmic-gui-2.png" alt="Screenshot: NixOS installation using XFS in the COSMIC Desktop GUI" width="80%" />
+  <img src="https://raw.githubusercontent.com/dwilliam62/nix-iso/main/img/nixos-install-cosmic-gui-2.png" alt="Screenshot: NixOS installation using XFS in the COSMIC Desktop GUI" width="80%" />
   <br /><br>
   <em>Screenshot: NixOS installation menu </em>
 </div>
@@ -21,7 +21,7 @@ English | [Español](./README.es.md)
 <br><br><br>
 
 <div align="center">
-  <img src="img/nixos-install-cosmic-gui-3.png" alt="Screenshot: NixOS installation using XFS in the COSMIC Desktop GUI" width="80%" />
+  <img src="https://raw.githubusercontent.com/dwilliam62/nix-iso/main/img/nixos-install-cosmic-gui-3.png" alt="Screenshot: NixOS installation using XFS in the COSMIC Desktop GUI" width="80%" />
   <br /><br>
   <em>Screenshot: NixOS menu </em>
 </div>
