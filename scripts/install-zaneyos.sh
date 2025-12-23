@@ -433,19 +433,30 @@ print_header "Repository Setup"
 
 mkdir -p /mnt/etc/nixos
 
+print_header "Cloning ZaneyOS Repository"
+echo -e "${BLUE}Cloning ZaneyOS from GitLab (branch: zos-next)...${NC}"
+if [ -d "/mnt/etc/nixos/zaneyos" ]; then
+  echo -e "${YELLOW}Removing existing ZaneyOS installation${NC}"
+  rm -rf /mnt/etc/nixos/zaneyos
+fi
+git clone https://gitlab.com/zaney/zaneyos.git -b zos-next --depth=1 /mnt/etc/nixos/zaneyos
+cd /mnt/etc/nixos/zaneyos || exit 1
+echo -e "${GREEN}✓ ZaneyOS cloned successfully${NC}"
+
 print_header "Generating Hardware Configuration"
 echo -e "${BLUE}Creating hardware configuration template...${NC}"
+mkdir -p hosts/$hostName
 
 # Always create the template to be safe
-cat > /mnt/etc/nixos/hardware-configuration.nix << 'HWEOF'
+cat > hosts/$hostName/hardware.nix << 'HWEOF'
 { config, lib, pkgs, modulesPath, ... }:
 {
   imports = [
     (modulesPath + "/installer/scan/not-detected.nix")
   ];
 
-  boot.initrd.availableKernelModules = [ "ata_piix" "mptspi" "sd_mod" "sr_mod" "virtio_pci" "xhci_pci" "ahci" "nvme" ];
-  boot.initrd.kernelModules = [ ];
+  boot.initrd.availableKernelModules = [ "ata_piix" "mptspi" "sd_mod" "sr_mod" "virtio_pci" "xhci_pci" "ahci" "nvme" "btrfs" ];
+  boot.initrd.kernelModules = [ "btrfs" ];
   boot.kernelModules = [ "kvm-intel" "kvm-amd" ];
   boot.extraModulePackages = [ ];
 
@@ -459,12 +470,6 @@ cat > /mnt/etc/nixos/hardware-configuration.nix << 'HWEOF'
     device = "/dev/disk/by-label/nixos";
     fsType = "btrfs";
     options = [ "subvol=@home" "compress=zstd" "discard=async" "noatime" ];
-  };
-
-  fileSystems."/nix" = {
-    device = "/dev/disk/by-label/nixos";
-    fsType = "btrfs";
-    options = [ "subvol=@nix" "compress=zstd" "discard=async" "noatime" ];
   };
 
   fileSystems."/.snapshots" = {
@@ -486,43 +491,13 @@ cat > /mnt/etc/nixos/hardware-configuration.nix << 'HWEOF'
 }
 HWEOF
 
-if [ -f /mnt/etc/nixos/hardware-configuration.nix ]; then
+if [ -f hosts/$hostName/hardware.nix ]; then
   echo -e "${GREEN}✓ Hardware configuration template created${NC}"
 else
   echo -e "${RED}✗ FATAL: Failed to create hardware configuration file${NC}"
   exit 1
 fi
 echo
-
-print_header "Cloning ZaneyOS Repository"
-echo -e "${BLUE}Cloning ZaneyOS from GitLab (branch: zos-next)...${NC}"
-if [ -d "/mnt/etc/nixos/zaneyos" ]; then
-  echo -e "${YELLOW}Removing existing ZaneyOS installation${NC}"
-  rm -rf /mnt/etc/nixos/zaneyos
-fi
-git clone https://gitlab.com/zaney/zaneyos.git -b zos-next --depth=1 /mnt/etc/nixos/zaneyos
-
-print_header "Moving Hardware Configuration"
-echo -e "${BLUE}Verifying and moving hardware configuration...${NC}"
-if [ ! -f /mnt/etc/nixos/hardware-configuration.nix ]; then
-  echo -e "${RED}✗ FATAL: hardware-configuration.nix not found at /mnt/etc/nixos/${NC}"
-  ls -la /mnt/etc/nixos/ || echo "Directory listing failed"
-  exit 1
-fi
-
-mkdir -p /mnt/etc/nixos/zaneyos/hosts/$hostName
-mv /mnt/etc/nixos/hardware-configuration.nix /mnt/etc/nixos/zaneyos/hosts/$hostName/hardware.nix
-
-if [ ! -f /mnt/etc/nixos/zaneyos/hosts/$hostName/hardware.nix ]; then
-  echo -e "${RED}✗ FATAL: hardware.nix not found at hosts/$hostName/ after move${NC}"
-  ls -la /mnt/etc/nixos/zaneyos/hosts/$hostName/ || echo "Directory listing failed"
-  exit 1
-fi
-
-echo -e "${GREEN}✓ Hardware configuration moved to hosts/$hostName/hardware.nix${NC}"
-echo
-cd /mnt/etc/nixos/zaneyos || exit 1
-echo -e "${GREEN}✓ ZaneyOS cloned successfully${NC}"
 
 print_header "Git Configuration"
 echo "👤 Setting up git configuration for version control:"
