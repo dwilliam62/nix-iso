@@ -336,12 +336,6 @@ esac
 echo -e "${GREEN}✓ Disk prepared successfully${NC}"
 echo
 
-print_header "Generating Hardware Configuration"
-echo -e "${BLUE}Running nixos-generate-config...${NC}"
-nixos-generate-config --root /mnt
-echo -e "${GREEN}✓ Hardware configuration generated${NC}"
-echo
-
 print_header "Hostname Configuration"
 
 # Critical warning about using "default" as hostname
@@ -434,6 +428,19 @@ Please type out your choice: " profile
   fi
   echo -e "${GREEN}Selected GPU profile: $profile${NC}"
 fi
+
+print_header "Generating Hardware Configuration"
+mkdir -p /mnt/etc/nixos/zaneyos/hosts/$hostName
+echo -e "${BLUE}Running nixos-generate-config...${NC}"
+nixos-generate-config --root /mnt
+echo -e "${BLUE}Moving hardware configuration to host directory...${NC}"
+if [ -f /mnt/etc/nixos/hardware-configuration.nix ]; then
+  mv /mnt/etc/nixos/hardware-configuration.nix /mnt/etc/nixos/zaneyos/hosts/$hostName/hardware.nix
+  echo -e "${GREEN}✓ Hardware configuration placed at hosts/$hostName/hardware.nix${NC}"
+else
+  echo -e "${YELLOW}⚠ Warning: hardware-configuration.nix not found${NC}"
+fi
+echo
 
 print_header "Repository Setup"
 
@@ -649,17 +656,6 @@ nixos-install --flake /mnt/etc/nixos/zaneyos#${hostName} --option accept-flake-c
 # Check the exit status of the last command (nixos-install)
 if [ $? -eq 0 ]; then
   print_header "Post-Installation Setup"
-  
-  # Move hardware configuration to the host-specific location
-  echo -e "${BLUE}Moving hardware configuration to host directory...${NC}"
-  mkdir -p /mnt/etc/nixos/zaneyos/hosts/$hostName
-  if [ -f /mnt/etc/nixos/hardware-configuration.nix ]; then
-    mv /mnt/etc/nixos/hardware-configuration.nix /mnt/etc/nixos/zaneyos/hosts/$hostName/hardware.nix
-    echo -e "${GREEN}✓ Hardware configuration moved to hosts/$hostName/hardware.nix${NC}"
-  else
-    echo -e "${YELLOW}⚠ Hardware configuration file not found at expected location${NC}"
-  fi
-  echo
   
   # Copy ZaneyOS to user home for convenient post-install access and edits
   echo -e "${BLUE}Copying ZaneyOS to user home...${NC}"
