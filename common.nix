@@ -152,4 +152,13 @@
   '';
 
   # Wireless network and wired network is enabled by default
+
+  # Disable screensaver on live ISO (no password set, can lock user out)
+  # Prevent idle actions that can lock the user without a password to unlock
+  services.logind.settings = {
+    Login = {
+      IdleActionSec = "0";  # Don't take idle actions
+      IdleAction = "none";  # Do nothing when idle
+    };
+  };
 }
