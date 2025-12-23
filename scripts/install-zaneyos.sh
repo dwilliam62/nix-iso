@@ -563,7 +563,9 @@ echo -e "${GREEN}✓ Console keymap set to: $consoleKeyMap${NC}"
 
 print_header "Configuring Host and Profile"
 mkdir -p hosts/"$hostName"
-cp hosts/default/*.nix hosts/"$hostName"
+# Copy all files from default EXCEPT hardware.nix (which we generated separately)
+cp hosts/default/*.nix hosts/"$hostName" 2>/dev/null || true
+rm -f hosts/"$hostName"/hardware.nix  # Remove the default hardware.nix if it was copied
 
 # Show a nice summary and ask for confirmation before making changes
 echo ""
