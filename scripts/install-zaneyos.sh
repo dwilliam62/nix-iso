@@ -429,22 +429,19 @@ Please type out your choice: " profile
   echo -e "${GREEN}Selected GPU profile: $profile${NC}"
 fi
 
-print_header "Generating Hardware Configuration"
-mkdir -p /mnt/etc/nixos/zaneyos/hosts/$hostName
-echo -e "${BLUE}Running nixos-generate-config...${NC}"
-nixos-generate-config --root /mnt
-echo -e "${BLUE}Moving hardware configuration to host directory...${NC}"
-if [ -f /mnt/etc/nixos/hardware-configuration.nix ]; then
-  mv /mnt/etc/nixos/hardware-configuration.nix /mnt/etc/nixos/zaneyos/hosts/$hostName/hardware.nix
-  echo -e "${GREEN}✓ Hardware configuration placed at hosts/$hostName/hardware.nix${NC}"
-else
-  echo -e "${YELLOW}⚠ Warning: hardware-configuration.nix not found${NC}"
-fi
-echo
-
 print_header "Repository Setup"
 
 mkdir -p /mnt/etc/nixos
+
+print_header "Generating Hardware Configuration"
+echo -e "${BLUE}Running nixos-generate-config...${NC}"
+nixos-generate-config --root /mnt
+if [ -f /mnt/etc/nixos/hardware-configuration.nix ]; then
+  echo -e "${GREEN}✓ Hardware configuration generated${NC}"
+else
+  echo -e "${YELLOW}⚠ Warning: hardware-configuration.nix not found at /mnt/etc/nixos/${NC}"
+fi
+echo
 
 print_header "Cloning ZaneyOS Repository"
 echo -e "${BLUE}Cloning ZaneyOS from GitLab (branch: zos-next)...${NC}"
@@ -453,6 +450,18 @@ if [ -d "/mnt/etc/nixos/zaneyos" ]; then
   rm -rf /mnt/etc/nixos/zaneyos
 fi
 git clone https://gitlab.com/zaney/zaneyos.git -b zos-next --depth=1 /mnt/etc/nixos/zaneyos
+
+print_header "Moving Hardware Configuration"
+mkdir -p /mnt/etc/nixos/zaneyos/hosts/$hostName
+if [ -f /mnt/etc/nixos/hardware-configuration.nix ]; then
+  mv /mnt/etc/nixos/hardware-configuration.nix /mnt/etc/nixos/zaneyos/hosts/$hostName/hardware.nix
+  echo -e "${GREEN}✓ Hardware configuration placed at hosts/$hostName/hardware.nix${NC}"
+else
+  echo -e "${RED}✗ Error: hardware-configuration.nix not found at /mnt/etc/nixos/${NC}"
+  echo -e "${RED}Installation cannot continue without hardware configuration.${NC}"
+  exit 1
+fi
+echo
 cd /mnt/etc/nixos/zaneyos || exit 1
 echo -e "${GREEN}✓ ZaneyOS cloned successfully${NC}"
 
