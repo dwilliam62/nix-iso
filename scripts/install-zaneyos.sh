@@ -7,6 +7,18 @@
 # Adapted from ZaneyOS official installer
 #######################################
 
+set -euo pipefail
+
+# Re-exec as root if needed
+if [ "${EUID:-$(id -u)}" -ne 0 ]; then
+  if command -v sudo >/dev/null 2>&1; then
+    exec sudo -E bash "$0" "$@"
+  else
+    echo "This installer must be run as root. Try: sudo $0" >&2
+    exit 1
+  fi
+fi
+
 # Define colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -163,14 +175,6 @@ select_disk() {
     exit 1
   fi
   [ -b "$disk" ] || { echo "Not a block device: $disk" >&2; exit 1; }
-  if command -v blockdev >/dev/null 2>&1; then
-    local ro
-    ro=$(blockdev --getro "$disk" || echo 1)
-    if [ "$ro" != "0" ]; then
-      echo "Device appears read-only: $disk (blockdev --getro != 0). Check VM settings and permissions." >&2
-      exit 1
-    fi
-  fi
   # Return the selected disk on stdout only
   echo "$disk"
 }
