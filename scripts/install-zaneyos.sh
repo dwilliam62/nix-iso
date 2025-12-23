@@ -649,12 +649,6 @@ rm -rf .git .gitmodules
 echo -e "${GREEN}✓ Flake prepared${NC}"
 echo
 
-echo -e "${BLUE}Copying ZaneyOS to user home for post-install access...${NC}"
-rm -rf /mnt/home/$systemUsername/zaneyos
-rsync -rlptD --delete /mnt/etc/nixos/zaneyos/ /mnt/home/$systemUsername/zaneyos/
-echo -e "${GREEN}✓ Copied successfully${NC}"
-echo
-
 print_header "Initiating NixOS Installation"
 printf "%s" "Ready to run nixos-install? [y/N]: "
 read -r REPLY
@@ -669,20 +663,32 @@ echo -e "${BLUE}Running nixos-install with ZaneyOS flake...${NC}"
 # This builds everything to /mnt instead of the live system
 nixos-install --flake /mnt/etc/nixos/zaneyos#${hostName} --option accept-flake-config true
 
-# Check the exit status of the last command (nixos-rebuild)
+# Check the exit status of the last command (nixos-install)
 if [ $? -eq 0 ]; then
+  print_header "Post-Installation Setup"
+  
+  # Copy ZaneyOS to user home for convenient post-install access and edits
+  echo -e "${BLUE}Copying ZaneyOS to user home...${NC}"
+  mkdir -p /mnt/home/$systemUsername
+  rm -rf /mnt/home/$systemUsername/zaneyos
+  cp -r /mnt/etc/nixos/zaneyos /mnt/home/$systemUsername/zaneyos
+  # Fix ownership so user can edit/rebuild if needed
+  chroot /mnt chown -R $systemUsername:users /home/$systemUsername/zaneyos 2>/dev/null || true
+  echo -e "${GREEN}✓ ZaneyOS copied to /home/$systemUsername/zaneyos${NC}"
+  echo
+  
   print_header "Setting User and Root Passwords"
   
   # Set user password if provided
   if [ -n "$USER_HASH" ]; then
     echo -e "${BLUE}Setting password for user '$systemUsername'...${NC}"
-    echo '${systemUsername}:${USER_HASH}' | sudo chpasswd -e 2>/dev/null || true
+    echo '${systemUsername}:${USER_HASH}' | chroot /mnt chpasswd -e 2>/dev/null || true
   fi
   
   # Set root password if provided
   if [ -n "$ROOT_HASH" ]; then
     echo -e "${BLUE}Setting password for root...${NC}"
-    echo 'root:${ROOT_HASH}' | sudo chpasswd -e 2>/dev/null || true
+    echo 'root:${ROOT_HASH}' | chroot /mnt chpasswd -e 2>/dev/null || true
   fi
   
   print_success_banner
