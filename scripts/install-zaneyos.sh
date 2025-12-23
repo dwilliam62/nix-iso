@@ -433,6 +433,17 @@ print_header "Repository Setup"
 
 mkdir -p /mnt/etc/nixos
 
+print_header "Generating Hardware Configuration"
+echo -e "${BLUE}Running nixos-generate-config...${NC}"
+nixos-generate-config --root /mnt
+
+if [ ! -f /mnt/etc/nixos/hardware-configuration.nix ]; then
+  echo -e "${RED}✗ FATAL: nixos-generate-config failed to create hardware configuration${NC}"
+  exit 1
+fi
+echo -e "${GREEN}✓ Hardware configuration generated${NC}"
+echo
+
 print_header "Cloning ZaneyOS Repository"
 echo -e "${BLUE}Cloning ZaneyOS from GitLab (branch: zos-next)...${NC}"
 if [ -d "/mnt/etc/nixos/zaneyos" ]; then
@@ -443,60 +454,15 @@ git clone https://gitlab.com/zaney/zaneyos.git -b zos-next --depth=1 /mnt/etc/ni
 cd /mnt/etc/nixos/zaneyos || exit 1
 echo -e "${GREEN}✓ ZaneyOS cloned successfully${NC}"
 
-print_header "Generating Hardware Configuration"
-echo -e "${BLUE}Creating hardware configuration template...${NC}"
+echo -e "${BLUE}Moving hardware configuration to host directory...${NC}"
 mkdir -p hosts/$hostName
+mv /mnt/etc/nixos/hardware-configuration.nix hosts/$hostName/hardware.nix
 
-# Always create the template to be safe
-cat > hosts/$hostName/hardware.nix << 'HWEOF'
-{ config, lib, pkgs, modulesPath, ... }:
-{
-  imports = [
-    (modulesPath + "/installer/scan/not-detected.nix")
-  ];
-
-  boot.initrd.availableKernelModules = [ "ata_piix" "mptspi" "sd_mod" "sr_mod" "virtio_pci" "xhci_pci" "ahci" "nvme" "btrfs" ];
-  boot.initrd.kernelModules = [ "btrfs" ];
-  boot.kernelModules = [ "kvm-intel" "kvm-amd" ];
-  boot.extraModulePackages = [ ];
-
-  fileSystems."/" = {
-    device = "/dev/disk/by-label/nixos";
-    fsType = "btrfs";
-    options = [ "subvol=@" "compress=zstd" "discard=async" "noatime" ];
-  };
-
-  fileSystems."/home" = {
-    device = "/dev/disk/by-label/nixos";
-    fsType = "btrfs";
-    options = [ "subvol=@home" "compress=zstd" "discard=async" "noatime" ];
-  };
-
-  fileSystems."/.snapshots" = {
-    device = "/dev/disk/by-label/nixos";
-    fsType = "btrfs";
-    options = [ "subvol=@snapshots" "compress=zstd" "discard=async" "noatime" ];
-  };
-
-  fileSystems."/boot" = {
-    device = "/dev/disk/by-label/EFI";
-    fsType = "vfat";
-    options = [ "fmask=0077" "dmask=0077" ];
-  };
-
-  swapDevices = [ ];
-
-  networking.useDHCP = lib.mkDefault true;
-  nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
-}
-HWEOF
-
-if [ -f hosts/$hostName/hardware.nix ]; then
-  echo -e "${GREEN}✓ Hardware configuration template created${NC}"
-else
-  echo -e "${RED}✗ FATAL: Failed to create hardware configuration file${NC}"
+if [ ! -f hosts/$hostName/hardware.nix ]; then
+  echo -e "${RED}✗ FATAL: Failed to move hardware configuration${NC}"
   exit 1
 fi
+echo -e "${GREEN}✓ Hardware configuration moved to hosts/$hostName/hardware.nix${NC}"
 echo
 
 print_header "Git Configuration"
