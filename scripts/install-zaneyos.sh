@@ -97,6 +97,162 @@ else
   exit 1
 fi
 
+# Ensure sbin paths available (parted, mkfs.*)
+for p in /usr/sbin /sbin /usr/local/sbin /run/current-system/sw/bin; do
+  [ -d "$p" ] && case ":$PATH:" in *":$p:"*) :;; *) PATH="$p:$PATH";; esac
+done
+export PATH
+
+# Check additional dependencies for disk operations
+req() { command -v "$1" >/dev/null 2>&1 || { echo "Missing dependency: $1" >&2; exit 1; }; }
+for dep in lsblk parted mkfs.fat mount umount wipefs blkid; do
+  req "$dep"
+done
+
+# Partition name helper
+part_names_for_disk() {
+  local d="$1"; local p1 p2
+  if [[ "$d" == *nvme* ]] || [[ "$d" == *mmcblk* ]]; then p1="${d}p1"; p2="${d}p2"; else p1="${d}1"; p2="${d}2"; fi
+  echo "$p1 $p2"
+}
+
+# Detect if any mountpoints exist under a disk (disk or its partitions)
+any_mounts_under() {
+  local d="$1"
+  lsblk -rno MOUNTPOINTS "$d" 2>/dev/null | awk '($0!="" && $0!="-") {found=1; exit} END{exit !found}'
+}
+
+# Disk selection helper (single disk)
+select_disk() {
+  echo >&2
+  echo "Available disks:" >&2
+  # Build a numbered list for safer selection (handles virtio: vda)
+  mapfile -t DISK_ROWS < <(lsblk -dn -o NAME,SIZE,TYPE,MODEL | awk '$3=="disk" {m=$4; if (m=="") m="-"; printf "%s\t%s\t%s\n", $1,$2,m}')
+  if [ "${#DISK_ROWS[@]}" -eq 0 ]; then
+    echo "No disks detected. Are you running in a VM without storage, or missing permissions?" >&2
+    exit 1
+  fi
+  local idx=1
+  for row in "${DISK_ROWS[@]}"; do
+    local name size model
+    name=$(echo "$row" | awk '{print $1}')
+    size=$(echo "$row" | awk '{print $2}')
+    model=$(echo "$row" | awk '{print $3}')
+    printf "[%d] /dev/%s  %s  %s\n" "$idx" "$name" "$size" "$model" >&2
+    idx=$((idx+1))
+  done
+  echo >&2
+  printf "Select disk by number (1-%d) or enter device path (/dev/sdX, /dev/vdX, /dev/nvmeXnY): " "${#DISK_ROWS[@]}" >&2
+  local choice
+  # Read from controlling terminal to avoid capturing prompts when using command substitution
+  if [ -t 0 ]; then
+    read -r choice
+  else
+    read -r choice </dev/tty
+  fi
+  local disk
+  if [[ "$choice" =~ ^/dev/ ]]; then
+    disk="$choice"
+  elif [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "${#DISK_ROWS[@]}" ]; then
+    local sel_row sel_name
+    sel_row="${DISK_ROWS[$((choice-1))]}"
+    sel_name=$(echo "$sel_row" | awk '{print $1}')
+    disk="/dev/$sel_name"
+  else
+    echo "Invalid selection: $choice" >&2
+    exit 1
+  fi
+  [ -b "$disk" ] || { echo "Not a block device: $disk" >&2; exit 1; }
+  if command -v blockdev >/dev/null 2>&1; then
+    local ro
+    ro=$(blockdev --getro "$disk" || echo 1)
+    if [ "$ro" != "0" ]; then
+      echo "Device appears read-only: $disk (blockdev --getro != 0). Check VM settings and permissions." >&2
+      exit 1
+    fi
+  fi
+  # Return the selected disk on stdout only
+  echo "$disk"
+}
+
+# Format/mount for each filesystem
+prep_btrfs() {
+  req mkfs.btrfs; req btrfs
+  local disk="$1"
+  printf '\nPartitioning %s ...\n' "$disk"
+  wipefs -af "$disk"
+  parted -s "$disk" mklabel gpt
+  parted -s "$disk" mkpart ESP fat32 1MiB 1025MiB
+  parted -s "$disk" set 1 esp on
+  parted -s "$disk" mkpart primary btrfs 1025MiB 100%
+  # Ensure the kernel has created partition nodes
+  command -v partprobe >/dev/null 2>&1 && partprobe "$disk" || true
+  command -v udevadm >/dev/null 2>&1 && udevadm settle || sleep 1
+  read -r P1 P2 < <(part_names_for_disk "$disk")
+  printf '\nCreating filesystems ...\n'
+  mkfs.fat -F32 -n EFI "$P1"
+  mkfs.btrfs -f -L nixos "$P2"
+  printf '\nCreating subvolumes ...\n'
+  mkdir -p /mnt
+  mount -o subvolid=5 "$P2" /mnt
+  btrfs subvolume create /mnt/@
+  btrfs subvolume create /mnt/@home
+  btrfs subvolume create /mnt/@nix
+  btrfs subvolume create /mnt/@snapshots
+  umount /mnt
+  printf '\nMounting target ...\n'
+  mount -o compress=zstd,discard=async,noatime,subvol=@ "$P2" /mnt
+  mkdir -p /mnt/{home,nix,boot,.snapshots}
+  mount -o compress=zstd,discard=async,noatime,subvol=@home "$P2" /mnt/home
+  mount -o compress=zstd,discard=async,noatime,subvol=@nix "$P2" /mnt/nix
+  mount -o compress=zstd,discard=async,noatime,subvol=@snapshots "$P2" /mnt/.snapshots
+  mount "$P1" /mnt/boot
+}
+
+prep_ext4() {
+  req mkfs.ext4
+  local disk="$1"
+  printf '\nPartitioning %s ...\n' "$disk"
+  wipefs -af "$disk"
+  parted -s "$disk" mklabel gpt
+  parted -s "$disk" mkpart ESP fat32 1MiB 1025MiB
+  parted -s "$disk" set 1 esp on
+  parted -s "$disk" mkpart primary ext4 1025MiB 100%
+  command -v partprobe >/dev/null 2>&1 && partprobe "$disk" || true
+  command -v udevadm >/dev/null 2>&1 && udevadm settle || sleep 1
+  read -r P1 P2 < <(part_names_for_disk "$disk")
+  printf '\nCreating filesystems ...\n'
+  mkfs.fat -F32 -n EFI "$P1"
+  mkfs.ext4 -F -L nixos "$P2"
+  printf '\nMounting target ...\n'
+  mkdir -p /mnt
+  mount -o noatime "$P2" /mnt
+  mkdir -p /mnt/{home,nix,boot,.snapshots}
+  mount "$P1" /mnt/boot
+}
+
+prep_xfs() {
+  req mkfs.xfs
+  local disk="$1"
+  printf '\nPartitioning %s ...\n' "$disk"
+  wipefs -af "$disk"
+  parted -s "$disk" mklabel gpt
+  parted -s "$disk" mkpart ESP fat32 1MiB 1025MiB
+  parted -s "$disk" set 1 esp on
+  parted -s "$disk" mkpart primary xfs 1025MiB 100%
+  command -v partprobe >/dev/null 2>&1 && partprobe "$disk" || true
+  command -v udevadm >/dev/null 2>&1 && udevadm settle || sleep 1
+  read -r P1 P2 < <(part_names_for_disk "$disk")
+  printf '\nCreating filesystems ...\n'
+  mkfs.fat -F32 -n EFI "$P1"
+  mkfs.xfs -f -L nixos "$P2"
+  printf '\nMounting target ...\n'
+  mkdir -p /mnt
+  mount -o noatime "$P2" /mnt
+  mkdir -p /mnt/{home,nix,boot,.snapshots}
+  mount "$P1" /mnt/boot
+}
+
 print_header "Initial Setup"
 
 echo -e "Default options are in brackets []"
@@ -151,6 +307,53 @@ else
   echo -e "${YELLOW}Warning: openssl not found; user '$systemUsername' and root will be created without passwords.${NC}"
   echo -e "${YELLOW}You can set passwords after first boot.${NC}" >&2
 fi
+
+print_header "Filesystem Selection"
+
+echo -e "${CYAN}Select filesystem:${NC}"
+echo "  1) Btrfs (with subvolumes & compression)"
+echo "  2) ext4  (stable & reliable)"
+echo "  3) XFS   (high-performance)"
+read -r -p "Choice [1-3]: " FS_CHOICE
+case "${FS_CHOICE:-1}" in
+  1) FS="btrfs" ;;
+  2) FS="ext4" ;;
+  3) FS="xfs" ;;
+  *) echo "Invalid choice" >&2; exit 1 ;;
+esac
+echo -e "${GREEN}✓ Filesystem set to: $FS${NC}"
+
+print_header "Disk Selection"
+
+DISK=$(select_disk)
+echo
+echo -e "${YELLOW}WARNING: This will DESTROY ALL data on $DISK${NC}"
+read -r -p "Type 'INSTALL' to proceed (or anything else to abort): " ok
+[ "$ok" = "INSTALL" ] || { echo -e "${RED}Installation aborted.${NC}"; exit 1; }
+
+echo -e "${BLUE}Checking if disk is mounted...${NC}"
+if any_mounts_under "$DISK"; then
+  echo -e "${RED}Device appears mounted (or has mounted partitions). Please unmount first:${NC}"
+  lsblk -rno NAME,MOUNTPOINTS "$DISK" | sed 's/^/  /' >&2 || true
+  exit 1
+fi
+
+echo -e "${BLUE}Preparing disk with $FS filesystem...${NC}"
+case "$FS" in
+  btrfs) prep_btrfs "$DISK" ;;
+  ext4)  prep_ext4  "$DISK" ;;
+  xfs)   prep_xfs   "$DISK" ;;
+  *) echo "Unsupported FS: $FS" >&2; exit 1 ;;
+esac
+
+echo -e "${GREEN}✓ Disk prepared successfully${NC}"
+echo
+
+print_header "Generating Hardware Configuration"
+echo -e "${BLUE}Running nixos-generate-config...${NC}"
+nixos-generate-config --root /mnt
+echo -e "${GREEN}✓ Hardware configuration generated${NC}"
+echo
 
 print_header "Hostname Configuration"
 
