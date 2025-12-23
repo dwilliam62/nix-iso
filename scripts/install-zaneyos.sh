@@ -105,6 +105,53 @@ sleep 2
 
 echo -e "${GREEN}Current directory: $(pwd)${NC}"
 
+print_header "User Configuration"
+
+# Prompt for username (for the installed user account)
+installusername=$(echo $USER)
+echo -e "Current user: ${GREEN}$installusername${NC}"
+read -rp "Enter username for the new system [ $installusername ]: " systemUsername
+if [ -z "$systemUsername" ]; then
+  systemUsername="$installusername"
+fi
+echo -e "${GREEN}✓ System username set to: $systemUsername${NC}"
+
+# Prompt for user password
+USER_HASH=""
+ROOT_HASH=""
+if command -v openssl >/dev/null 2>&1; then
+  # User password
+  while true; do
+    read -rs -p "Password for user '$systemUsername': " USER_PW1; echo >&2
+    read -rs -p "Confirm password for '$systemUsername': " USER_PW2; echo >&2
+    if [ "$USER_PW1" != "$USER_PW2" ]; then
+      echo -e "${RED}Passwords do not match. Please try again.${NC}" >&2
+      continue
+    fi
+    USER_HASH=$(printf %s "$USER_PW1" | openssl passwd -6 -stdin)
+    unset USER_PW1 USER_PW2
+    break
+  done
+
+  # Root password
+  echo ""
+  echo -e "${YELLOW}Setting root password (for system administration):${NC}"
+  while true; do
+    read -rs -p "Password for root: " ROOT_PW1; echo >&2
+    read -rs -p "Confirm password for root: " ROOT_PW2; echo >&2
+    if [ "$ROOT_PW1" != "$ROOT_PW2" ]; then
+      echo -e "${RED}Passwords do not match. Please try again.${NC}" >&2
+      continue
+    fi
+    ROOT_HASH=$(printf %s "$ROOT_PW1" | openssl passwd -6 -stdin)
+    unset ROOT_PW1 ROOT_PW2
+    break
+  done
+else
+  echo -e "${YELLOW}Warning: openssl not found; user '$systemUsername' and root will be created without passwords.${NC}"
+  echo -e "${YELLOW}You can set passwords after first boot.${NC}" >&2
+fi
+
 print_header "Hostname Configuration"
 
 # Critical warning about using "default" as hostname
@@ -214,11 +261,10 @@ print_header "Git Configuration"
 echo "👤 Setting up git configuration for version control:"
 echo "  This is needed for system updates and configuration management."
 echo ""
-installusername=$(echo $USER)
-echo -e "Current username: ${GREEN}$installusername${NC}"
-read -rp "Enter your full name for git commits [ $installusername ]: " gitUsername
+echo -e "Using system username for git: ${GREEN}$systemUsername${NC}"
+read -rp "Enter your full name for git commits [ $systemUsername ]: " gitUsername
 if [ -z "$gitUsername" ]; then
-  gitUsername="$installusername"
+  gitUsername="$systemUsername"
 fi
 
 echo "📧 Examples: john@example.com, jane.doe@company.org"
@@ -322,7 +368,7 @@ cp hosts/default/*.nix hosts/"$hostName"
 
 # Show a nice summary and ask for confirmation before making changes
 echo ""
-print_summary "$hostName" "$profile" "$installusername" "$timezone" "$keyboardLayout" "$keyboardVariant" "$consoleKeyMap"
+print_summary "$hostName" "$profile" "$systemUsername" "$timezone" "$keyboardLayout" "$keyboardVariant" "$consoleKeyMap"
 echo ""
 echo -e "${YELLOW}Please review the configuration above.${NC}"
 printf "%b" "${YELLOW}Continue with installation? (Y/N): ${NC}"
@@ -342,7 +388,7 @@ echo -e "${BLUE}Updating configuration files...${NC}"
 cp ./flake.nix ./flake.nix.bak
 
 # 1) Update username if present
-sed -i -E "s|^[[:space:]]*username[[:space:]]*=[[:space:]]*\"[^\"]*\";|    username = \"${installusername}\";|" ./flake.nix
+sed -i -E "s|^[[:space:]]*username[[:space:]]*=[[:space:]]*\"[^\"]*\";|    username = \"${systemUsername}\";|" ./flake.nix
 
 # 2) Ensure the new host is listed in the hosts array (append if missing)
 awk -v h="$hostName" '
@@ -383,9 +429,10 @@ echo "Configuration files updated successfully!"
 print_header "Git Configuration"
 git config --global user.name "$gitUsername"
 git config --global user.email "$gitEmail"
-git add .
+git add . --all
 git config --global --unset-all user.name
 git config --global --unset-all user.email
+echo -e "${GREEN}✓ Committed initial configuration to git${NC}"
 
 print_header "Generating Hardware Configuration"
 sudo nixos-generate-config --show-hardware-config >./hosts/$hostName/hardware.nix
@@ -406,6 +453,20 @@ sudo nixos-rebuild boot --flake ~/zaneyos#${hostName}
 
 # Check the exit status of the last command (nixos-rebuild)
 if [ $? -eq 0 ]; then
+  print_header "Setting User and Root Passwords"
+  
+  # Set user password if provided
+  if [ -n "$USER_HASH" ]; then
+    echo -e "${BLUE}Setting password for user '$systemUsername'...${NC}"
+    echo '${systemUsername}:${USER_HASH}' | sudo chpasswd -e 2>/dev/null || true
+  fi
+  
+  # Set root password if provided
+  if [ -n "$ROOT_HASH" ]; then
+    echo -e "${BLUE}Setting password for root...${NC}"
+    echo 'root:${ROOT_HASH}' | sudo chpasswd -e 2>/dev/null || true
+  fi
+  
   print_success_banner
 else
   print_failure_banner
