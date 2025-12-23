@@ -434,12 +434,59 @@ print_header "Repository Setup"
 mkdir -p /mnt/etc/nixos
 
 print_header "Generating Hardware Configuration"
-echo -e "${BLUE}Running nixos-generate-config...${NC}"
-nixos-generate-config --root /mnt
-if [ -f /mnt/etc/nixos/hardware-configuration.nix ]; then
-  echo -e "${GREEN}✓ Hardware configuration generated${NC}"
+echo -e "${BLUE}Attempting nixos-generate-config...${NC}"
+if nixos-generate-config --root /mnt 2>/dev/null; then
+  if [ -f /mnt/etc/nixos/hardware-configuration.nix ]; then
+    echo -e "${GREEN}✓ Hardware configuration generated${NC}"
+  else
+    echo -e "${YELLOW}⚠ nixos-generate-config ran but file not created, using template${NC}"
+    HW_CONFIG_CREATED=false
+  fi
 else
-  echo -e "${YELLOW}⚠ Warning: hardware-configuration.nix not found at /mnt/etc/nixos/${NC}"
+  echo -e "${YELLOW}⚠ nixos-generate-config failed, using template${NC}"
+  HW_CONFIG_CREATED=false
+fi
+
+# If nixos-generate-config didn't work, create a basic template
+if [ "${HW_CONFIG_CREATED:-true}" = false ] || [ ! -f /mnt/etc/nixos/hardware-configuration.nix ]; then
+  echo -e "${BLUE}Creating hardware configuration from template...${NC}"
+  cat > /mnt/etc/nixos/hardware-configuration.nix << 'HWEOF'
+{ config, lib, pkgs, modulesPath, ... }:
+{
+  imports = [
+    (modulesPath + "/installer/scan/not-detected.nix")
+  ];
+
+  boot.initrd.availableKernelModules = [ "ata_piix" "mptspi" "sd_mod" "sr_mod" "virtio_pci" "xhci_pci" "ahci" "nvme" ];
+  boot.initrd.kernelModules = [ ];
+  boot.kernelModules = [ "kvm-intel" "kvm-amd" ];
+  boot.extraModulePackages = [ ];
+
+  fileSystems."/" = {
+    device = "/dev/disk/by-label/nixos";
+    fsType = "btrfs";
+    options = [ "subvol=root" "compress=zstd" ];
+  };
+
+  fileSystems."/home" = {
+    device = "/dev/disk/by-label/nixos";
+    fsType = "btrfs";
+    options = [ "subvol=home" "compress=zstd" ];
+  };
+
+  fileSystems."/boot" = {
+    device = "/dev/disk/by-label/EFI";
+    fsType = "vfat";
+    options = [ "fmask=0077" "dmask=0077" ];
+  };
+
+  swapDevices = [ ];
+
+  networking.useDHCP = lib.mkDefault true;
+  nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
+}
+HWEOF
+  echo -e "${GREEN}✓ Hardware configuration template created${NC}"
 fi
 echo
 
