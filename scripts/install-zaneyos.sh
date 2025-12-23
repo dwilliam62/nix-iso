@@ -434,23 +434,10 @@ print_header "Repository Setup"
 mkdir -p /mnt/etc/nixos
 
 print_header "Generating Hardware Configuration"
-echo -e "${BLUE}Attempting nixos-generate-config...${NC}"
-if nixos-generate-config --root /mnt 2>/dev/null; then
-  if [ -f /mnt/etc/nixos/hardware-configuration.nix ]; then
-    echo -e "${GREEN}✓ Hardware configuration generated${NC}"
-  else
-    echo -e "${YELLOW}⚠ nixos-generate-config ran but file not created, using template${NC}"
-    HW_CONFIG_CREATED=false
-  fi
-else
-  echo -e "${YELLOW}⚠ nixos-generate-config failed, using template${NC}"
-  HW_CONFIG_CREATED=false
-fi
+echo -e "${BLUE}Creating hardware configuration template...${NC}"
 
-# If nixos-generate-config didn't work, create a basic template
-if [ "${HW_CONFIG_CREATED:-true}" = false ] || [ ! -f /mnt/etc/nixos/hardware-configuration.nix ]; then
-  echo -e "${BLUE}Creating hardware configuration from template...${NC}"
-  cat > /mnt/etc/nixos/hardware-configuration.nix << 'HWEOF'
+# Always create the template to be safe
+cat > /mnt/etc/nixos/hardware-configuration.nix << 'HWEOF'
 { config, lib, pkgs, modulesPath, ... }:
 {
   imports = [
@@ -486,7 +473,12 @@ if [ "${HW_CONFIG_CREATED:-true}" = false ] || [ ! -f /mnt/etc/nixos/hardware-co
   nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
 }
 HWEOF
+
+if [ -f /mnt/etc/nixos/hardware-configuration.nix ]; then
   echo -e "${GREEN}✓ Hardware configuration template created${NC}"
+else
+  echo -e "${RED}✗ FATAL: Failed to create hardware configuration file${NC}"
+  exit 1
 fi
 echo
 
@@ -499,15 +491,23 @@ fi
 git clone https://gitlab.com/zaney/zaneyos.git -b zos-next --depth=1 /mnt/etc/nixos/zaneyos
 
 print_header "Moving Hardware Configuration"
-mkdir -p /mnt/etc/nixos/zaneyos/hosts/$hostName
-if [ -f /mnt/etc/nixos/hardware-configuration.nix ]; then
-  mv /mnt/etc/nixos/hardware-configuration.nix /mnt/etc/nixos/zaneyos/hosts/$hostName/hardware.nix
-  echo -e "${GREEN}✓ Hardware configuration placed at hosts/$hostName/hardware.nix${NC}"
-else
-  echo -e "${RED}✗ Error: hardware-configuration.nix not found at /mnt/etc/nixos/${NC}"
-  echo -e "${RED}Installation cannot continue without hardware configuration.${NC}"
+echo -e "${BLUE}Verifying and moving hardware configuration...${NC}"
+if [ ! -f /mnt/etc/nixos/hardware-configuration.nix ]; then
+  echo -e "${RED}✗ FATAL: hardware-configuration.nix not found at /mnt/etc/nixos/${NC}"
+  ls -la /mnt/etc/nixos/ || echo "Directory listing failed"
   exit 1
 fi
+
+mkdir -p /mnt/etc/nixos/zaneyos/hosts/$hostName
+mv /mnt/etc/nixos/hardware-configuration.nix /mnt/etc/nixos/zaneyos/hosts/$hostName/hardware.nix
+
+if [ ! -f /mnt/etc/nixos/zaneyos/hosts/$hostName/hardware.nix ]; then
+  echo -e "${RED}✗ FATAL: hardware.nix not found at hosts/$hostName/ after move${NC}"
+  ls -la /mnt/etc/nixos/zaneyos/hosts/$hostName/ || echo "Directory listing failed"
+  exit 1
+fi
+
+echo -e "${GREEN}✓ Hardware configuration moved to hosts/$hostName/hardware.nix${NC}"
 echo
 cd /mnt/etc/nixos/zaneyos || exit 1
 echo -e "${GREEN}✓ ZaneyOS cloned successfully${NC}"
