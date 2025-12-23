@@ -278,9 +278,7 @@ echo -e "${GREEN}✓ System username set to: $systemUsername${NC}"
 
 # Prompt for user password
 USER_HASH=""
-ROOT_HASH=""
 if command -v openssl >/dev/null 2>&1; then
-  # User password
   while true; do
     read -rs -p "Password for user '$systemUsername': " USER_PW1; echo >&2
     read -rs -p "Confirm password for '$systemUsername': " USER_PW2; echo >&2
@@ -292,24 +290,9 @@ if command -v openssl >/dev/null 2>&1; then
     unset USER_PW1 USER_PW2
     break
   done
-
-  # Root password
-  echo ""
-  echo -e "${YELLOW}Setting root password (for system administration):${NC}"
-  while true; do
-    read -rs -p "Password for root: " ROOT_PW1; echo >&2
-    read -rs -p "Confirm password for root: " ROOT_PW2; echo >&2
-    if [ "$ROOT_PW1" != "$ROOT_PW2" ]; then
-      echo -e "${RED}Passwords do not match. Please try again.${NC}" >&2
-      continue
-    fi
-    ROOT_HASH=$(printf %s "$ROOT_PW1" | openssl passwd -6 -stdin)
-    unset ROOT_PW1 ROOT_PW2
-    break
-  done
 else
-  echo -e "${YELLOW}Warning: openssl not found; user '$systemUsername' and root will be created without passwords.${NC}"
-  echo -e "${YELLOW}You can set passwords after first boot.${NC}" >&2
+  echo -e "${YELLOW}Warning: openssl not found; user '$systemUsername' will be created without a password.${NC}"
+  echo -e "${YELLOW}You can set the password after first boot.${NC}" >&2
 fi
 
 print_header "Filesystem Selection"
@@ -667,6 +650,17 @@ nixos-install --flake /mnt/etc/nixos/zaneyos#${hostName} --option accept-flake-c
 if [ $? -eq 0 ]; then
   print_header "Post-Installation Setup"
   
+  # Move hardware configuration to the host-specific location
+  echo -e "${BLUE}Moving hardware configuration to host directory...${NC}"
+  mkdir -p /mnt/etc/nixos/zaneyos/hosts/$hostName
+  if [ -f /mnt/etc/nixos/hardware-configuration.nix ]; then
+    mv /mnt/etc/nixos/hardware-configuration.nix /mnt/etc/nixos/zaneyos/hosts/$hostName/hardware.nix
+    echo -e "${GREEN}✓ Hardware configuration moved to hosts/$hostName/hardware.nix${NC}"
+  else
+    echo -e "${YELLOW}⚠ Hardware configuration file not found at expected location${NC}"
+  fi
+  echo
+  
   # Copy ZaneyOS to user home for convenient post-install access and edits
   echo -e "${BLUE}Copying ZaneyOS to user home...${NC}"
   mkdir -p /mnt/home/$systemUsername
@@ -677,18 +671,13 @@ if [ $? -eq 0 ]; then
   echo -e "${GREEN}✓ ZaneyOS copied to /home/$systemUsername/zaneyos${NC}"
   echo
   
-  print_header "Setting User and Root Passwords"
-  
   # Set user password if provided
   if [ -n "$USER_HASH" ]; then
+    print_header "Setting User Password"
     echo -e "${BLUE}Setting password for user '$systemUsername'...${NC}"
-    echo '${systemUsername}:${USER_HASH}' | chroot /mnt chpasswd -e 2>/dev/null || true
-  fi
-  
-  # Set root password if provided
-  if [ -n "$ROOT_HASH" ]; then
-    echo -e "${BLUE}Setting password for root...${NC}"
-    echo 'root:${ROOT_HASH}' | chroot /mnt chpasswd -e 2>/dev/null || true
+    echo "${systemUsername}:${USER_HASH}" | chroot /mnt chpasswd -e 2>/dev/null || true
+    echo -e "${GREEN}✓ User password set${NC}"
+    echo
   fi
   
   print_success_banner
