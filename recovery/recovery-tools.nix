@@ -110,6 +110,9 @@ in
       yq-go
       openssl
 
+      # Programming languages and tools
+      python3
+
       # Storage/filesystems & recovery
       parted
       gptfdisk
