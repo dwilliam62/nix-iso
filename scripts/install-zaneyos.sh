@@ -454,15 +454,17 @@ fi
 
 print_header "Repository Setup"
 
-backupname=$(date +"%Y-%m-%d-%H-%M-%S")
-if [ -d "$HOME/zaneyos" ]; then
-  echo -e "${YELLOW}Backing up existing zaneyos-${backupname}${NC}"
-  mv "$HOME/zaneyos" "$HOME/zaneyos-${backupname}"
-fi
+mkdir -p /mnt/etc/nixos
 
 print_header "Cloning ZaneyOS Repository"
-git clone https://gitlab.com/zaney/zaneyos.git -b zos-next --depth=1 ~/zaneyos
-cd ~/zaneyos || exit 1
+echo -e "${BLUE}Cloning ZaneyOS from GitLab (branch: zos-next)...${NC}"
+if [ -d "/mnt/etc/nixos/zaneyos" ]; then
+  echo -e "${YELLOW}Removing existing ZaneyOS installation${NC}"
+  rm -rf /mnt/etc/nixos/zaneyos
+fi
+git clone https://gitlab.com/zaney/zaneyos.git -b zos-next --depth=1 /mnt/etc/nixos/zaneyos
+cd /mnt/etc/nixos/zaneyos || exit 1
+echo -e "${GREEN}✓ ZaneyOS cloned successfully${NC}"
 
 print_header "Git Configuration"
 echo "👤 Setting up git configuration for version control:"
@@ -656,7 +658,7 @@ if ! [[ "$REPLY" =~ ^[Yy]$ ]]; then
 fi
 
 # Build using the selected HOST (GPU profile is configured inside the host files)
-sudo nixos-rebuild boot --flake ~/zaneyos#${hostName}
+sudo nixos-rebuild boot --flake /mnt/etc/nixos/zaneyos#${hostName}
 
 # Check the exit status of the last command (nixos-rebuild)
 if [ $? -eq 0 ]; then
