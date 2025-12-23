@@ -643,22 +643,31 @@ git config --global --unset-all user.name
 git config --global --unset-all user.email
 echo -e "${GREEN}✓ Committed initial configuration to git${NC}"
 
-print_header "Generating Hardware Configuration"
-sudo nixos-generate-config --show-hardware-config >./hosts/$hostName/hardware.nix
+print_header "Preparing Flake for Installation"
+echo -e "${BLUE}Removing git metadata to treat flake as local path...${NC}"
+rm -rf .git .gitmodules
+echo -e "${GREEN}✓ Flake prepared${NC}"
+echo
 
-print_header "Setting Nix Configuration"
-NIX_CONFIG="experimental-features = nix-command flakes"
+echo -e "${BLUE}Copying ZaneyOS to user home for post-install access...${NC}"
+rm -rf /mnt/home/$systemUsername/zaneyos
+rsync -rlptD --delete /mnt/etc/nixos/zaneyos/ /mnt/home/$systemUsername/zaneyos/
+echo -e "${GREEN}✓ Copied successfully${NC}"
+echo
 
-print_header "Initiating NixOS Build"
-printf "%s" "Ready to run initial build? [y/N]: "
+print_header "Initiating NixOS Installation"
+printf "%s" "Ready to run nixos-install? [y/N]: "
 read -r REPLY
 if ! [[ "$REPLY" =~ ^[Yy]$ ]]; then
-  echo -e "${RED}Build cancelled.${NC}"
+  echo -e "${RED}Installation cancelled.${NC}"
   exit 1
 fi
 
-# Build using the selected HOST (GPU profile is configured inside the host files)
-sudo nixos-rebuild boot --flake /mnt/etc/nixos/zaneyos#${hostName}
+echo
+echo -e "${BLUE}Running nixos-install with ZaneyOS flake...${NC}"
+# Use nixos-install instead of nixos-rebuild to avoid filling live system's /nix/store
+# This builds everything to /mnt instead of the live system
+nixos-install --flake /mnt/etc/nixos/zaneyos#${hostName} --option accept-flake-config true
 
 # Check the exit status of the last command (nixos-rebuild)
 if [ $? -eq 0 ]; then
