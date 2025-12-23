@@ -703,17 +703,13 @@ if [ $? -eq 0 ]; then
   fi
   
   echo -e "${BLUE}Setting root password...${NC}"
-  chroot /mnt usermod -p "${ROOT_HASH}" root 2>/dev/null || {
-    echo -e "${RED}Failed to set root password${NC}"
-  }
+  sed -i "s|^root:[^:]*:|root:${ROOT_HASH}:|" /mnt/etc/shadow
   echo -e "${GREEN}✓ Root password set${NC}"
   
   # Set user password if provided
   if [ -n "$USER_HASH" ]; then
     echo -e "${BLUE}Setting password for user '$systemUsername'...${NC}"
-    chroot /mnt usermod -p "${USER_HASH}" $systemUsername 2>/dev/null || {
-      echo -e "${RED}Failed to set user password${NC}"
-    }
+    sed -i "s|^${systemUsername}:[^:]*:|${systemUsername}:${USER_HASH}:|" /mnt/etc/shadow
     echo -e "${GREEN}✓ User password set${NC}"
   fi
   echo
