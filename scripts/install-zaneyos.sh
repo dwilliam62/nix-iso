@@ -276,24 +276,9 @@ if [ -z "$systemUsername" ]; then
 fi
 echo -e "${GREEN}✓ System username set to: $systemUsername${NC}"
 
-# Prompt for user password
+# Initialize password hashes (will be set post-install)
 USER_HASH=""
-if command -v openssl >/dev/null 2>&1; then
-  while true; do
-    read -rs -p "Password for user '$systemUsername': " USER_PW1; echo >&2
-    read -rs -p "Confirm password for '$systemUsername': " USER_PW2; echo >&2
-    if [ "$USER_PW1" != "$USER_PW2" ]; then
-      echo -e "${RED}Passwords do not match. Please try again.${NC}" >&2
-      continue
-    fi
-    USER_HASH=$(printf %s "$USER_PW1" | openssl passwd -6 -stdin)
-    unset USER_PW1 USER_PW2
-    break
-  done
-else
-  echo -e "${YELLOW}Warning: openssl not found; user '$systemUsername' will be created without a password.${NC}"
-  echo -e "${YELLOW}You can set the password after first boot.${NC}" >&2
-fi
+ROOT_HASH=""
 
 print_header "Filesystem Selection"
 
@@ -666,7 +651,8 @@ echo
 echo -e "${BLUE}Running nixos-install with ZaneyOS flake...${NC}"
 # Use nixos-install instead of nixos-rebuild to avoid filling live system's /nix/store
 # This builds everything to /mnt instead of the live system
-nixos-install --flake /mnt/etc/nixos/zaneyos#${hostName} --option accept-flake-config true
+# Use --no-root-passwd to skip interactive password prompt and set it ourselves post-install
+nixos-install --flake /mnt/etc/nixos/zaneyos#${hostName} --option accept-flake-config true --no-root-passwd
 
 # Check the exit status of the last command (nixos-install)
 if [ $? -eq 0 ]; then
@@ -682,14 +668,55 @@ if [ $? -eq 0 ]; then
   echo -e "${GREEN}✓ ZaneyOS copied to /home/$systemUsername/zaneyos${NC}"
   echo
   
+  print_header "Setting Passwords"
+  
+  # Set user password
+  if [ -z "$USER_HASH" ]; then
+    echo -e "${YELLOW}Setting password for user '$systemUsername'...${NC}"
+    while true; do
+      read -rs -p "Password for user '$systemUsername': " USER_PW1; echo >&2
+      read -rs -p "Confirm password for '$systemUsername': " USER_PW2; echo >&2
+      if [ "$USER_PW1" = "$USER_PW2" ]; then
+        USER_HASH=$(printf %s "$USER_PW1" | openssl passwd -6 -stdin)
+        unset USER_PW1 USER_PW2
+        break
+      else
+        echo -e "${RED}Passwords do not match. Please try again.${NC}" >&2
+      fi
+    done
+  fi
+  
+  # Set root password
+  if [ -z "$ROOT_HASH" ]; then
+    echo -e "${YELLOW}Setting password for root...${NC}"
+    while true; do
+      read -rs -p "Password for root: " ROOT_PW1; echo >&2
+      read -rs -p "Confirm password for root: " ROOT_PW2; echo >&2
+      if [ "$ROOT_PW1" = "$ROOT_PW2" ]; then
+        ROOT_HASH=$(printf %s "$ROOT_PW1" | openssl passwd -6 -stdin)
+        unset ROOT_PW1 ROOT_PW2
+        break
+      else
+        echo -e "${RED}Passwords do not match. Please try again.${NC}" >&2
+      fi
+    done
+  fi
+  
+  echo -e "${BLUE}Setting root password...${NC}"
+  chroot /mnt usermod -p "${ROOT_HASH}" root 2>/dev/null || {
+    echo -e "${RED}Failed to set root password${NC}"
+  }
+  echo -e "${GREEN}✓ Root password set${NC}"
+  
   # Set user password if provided
   if [ -n "$USER_HASH" ]; then
-    print_header "Setting User Password"
     echo -e "${BLUE}Setting password for user '$systemUsername'...${NC}"
-    echo "${systemUsername}:${USER_HASH}" | chroot /mnt chpasswd -e 2>/dev/null || true
+    chroot /mnt usermod -p "${USER_HASH}" $systemUsername 2>/dev/null || {
+      echo -e "${RED}Failed to set user password${NC}"
+    }
     echo -e "${GREEN}✓ User password set${NC}"
-    echo
   fi
+  echo
   
   print_success_banner
 else
