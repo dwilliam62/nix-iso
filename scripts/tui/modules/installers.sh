@@ -26,6 +26,11 @@ _add_installer_item \
   "Install ddubsOS (select FS, disk; flake-based)" \
   "if [ -x ./scripts/install-ddubsos.sh ]; then ./scripts/install-ddubsos.sh; elif [ -x \"$SCRIPT_DIR/install-ddubsos.sh\" ]; then \"$SCRIPT_DIR/install-ddubsos.sh\"; else install-ddubsos.sh; fi"
 _add_installer_item \
+  zaneyos_main \
+  "Install ZaneyOS (select FS, disk; flake-based, main branch)" \
+  "if [ -x ./scripts/install-zaneyos-main.sh ]; then ./scripts/install-zaneyos-main.sh; elif [ -x \"$SCRIPT_DIR/install-zaneyos-main.sh\" ]; then \"$SCRIPT_DIR/install-zaneyos-main.sh\"; else install-zaneyos-main.sh; fi" \
+  "Testing"
+_add_installer_item \
   zaneyos \
   "Install ZaneyOS (select FS, disk; flake-based, zos-next branch)" \
   "if [ -x ./scripts/install-zaneyos.sh ]; then ./scripts/install-zaneyos.sh; elif [ -x \"$SCRIPT_DIR/install-zaneyos.sh\" ]; then \"$SCRIPT_DIR/install-zaneyos.sh\"; else install-zaneyos.sh; fi" \

@@ -2,7 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [2025-12-24] ddubsos-iso
+
+- Set ddubsos-iso branchd as default in GitHub
+- Added install options for:
+  - ZaneyOS - main branch
+  - ZaneyOS - zos-next branch (testing)
+
+## [2005-10] ddubsos-iso
+
 - Breaking: Remove ZFS and bcachefs features from ISOs and tools
   - Drop ZFS and bcachefs from boot.supportedFilesystems; stop packaging bcachefs-tools and ZFS userland in recovery tools
   - Remove ZFS/bcachefs installers from the TUI menu and from packaged scripts on the ISO
@@ -23,11 +31,12 @@ All notable changes to this project will be documented in this file.
 - Minimal ISO: print login hint "To access menu -- run nix-iso" after auto-login; also show this hint when opening a terminal in GNOME/COSMIC
 
 ## [2025-08-28] ddubsos-iso
+
 - Docs: Add a comprehensive project guide consolidating overview, architecture, build/install flows, filesystem defaults, and TUI usage
   - English: docs/project-guide.md
   - Español: docs/project-guide.es.md
   - Link both from README.md under Documentation and add language-switch links at the top of the guides
-- Docs: Add a deep-dive section covering scripts/install-*.sh behavior and guardrails for quick AI/human onboarding
+- Docs: Add a deep-dive section covering scripts/install-\*.sh behavior and guardrails for quick AI/human onboarding
 - Docs: Document profile-specific UX and docs packaging across ISO profiles
   - Offline docs generated via pandoc to HTML and installed under /etc/nix-iso-docs
   - Desktop/app menu entries to open docs and launch the installer TUI (nix-iso)
@@ -35,7 +44,9 @@ All notable changes to this project will be documented in this file.
   - COSMIC ISO: COSMIC-specific launcher that opens a terminal and runs nix-iso
   - GNOME ISO: launchers/icons configured but not functioning as expected as of 2025-08-28; users can run nix-iso from a terminal
 - README: Add links to the new project guides (EN/ES) in the Documentation section
+
 ## [2025-08-27] ddubsos-iso
+
 - Docs UX: Add offline HTML rendering for README (EN/ES) using pandoc during ISO build
   - Generate /etc/nix-iso-docs/README.html and README.es.html
   - Keep Markdown sources and docs/ tree under /etc/nix-iso-docs
@@ -54,6 +65,7 @@ All notable changes to this project will be documented in this file.
   - Hyper-V skipped: option not available on current nixpkgs snapshot; will re-enable when present
 
 ## [2025-08-26] ddubsos-iso
+
 - bcachefs installer (scripts/install-bcachefs.sh):
   - Add user-facing note at destructive confirmation explaining that messages like "ERROR: not a btrfs filesystem: /mnt/..." are benign probes from btrfs tools during config/mount inspection and can be safely ignored when installing to bcachefs.
   - Generate hardware-configuration.nix with --no-filesystems and explicitly declare bcachefs subvolume mounts in configuration.nix to avoid incorrect auto-detection.
@@ -69,6 +81,7 @@ All notable changes to this project will be documented in this file.
   - Commit references: 87630c1, 478b44c, da551f7, de5a415
 
 ## [2025-08-25] ddubsos-iso
+
 - ZFS installers: adopt a practical dataset layout similar to btrfs @-style subvolumes using ZFS datasets.
 - bcachefs installer: adopt structured subvolume layout and initrd support.
   - scripts/install-bcachefs.sh
@@ -111,7 +124,7 @@ All notable changes to this project will be documented in this file.
     - Ensure PATH includes common sbin locations; add missing runtime requires.
     - Fix parted error: remove unsupported fs-type token from mkpart (bcachefs); name the partition; format with mkfs.bcachefs.
     - Further suppress helper noise by mounting top-level and bind-mounting subvolumes (no subvol mount options); remount nodev/noexec on log/cache/tmp.
-    - Remove btrfs-only mount options (compress=) from bcachefs mounts; use only noatime; rename subvolumes to simple names (root, home, nix, var, var-*) and bind from a staging mount.
+    - Remove btrfs-only mount options (compress=) from bcachefs mounts; use only noatime; rename subvolumes to simple names (root, home, nix, var, var-\*) and bind from a staging mount.
 
 - Shell/Terminals: Add tmux with system-wide /etc/tmux.conf (simple, broadly compatible)
   - Provide sane defaults: prefix C-a, mouse on, vi keys, base-index 1, pane-base-index 1
@@ -120,6 +133,7 @@ All notable changes to this project will be documented in this file.
   - Avoid popups/menus and terminal-specific features for ISO compatibility
 
 Future considerations
+
 - Snapshots/retention management: enable services.sanoid or services.zfs.autoSnapshot with sensible policies; mark noisy datasets as non-snapshotted.
 - Native ZFS encryption for selected datasets (or full root), including initrd key management.
 - Workload tuning datasets and properties for databases (recordsize=16K), VMs/large files (recordsize=1M, logbias=throughput), and Docker under /var/lib/docker.
@@ -127,6 +141,7 @@ Future considerations
 - Swap strategy: prefer a swap partition; if using zvol-backed swap, apply safe properties and exclude from snapshots.
 
 ## [2025-08-24] ddubsos-iso
+
 - Add ai-summary.json: machine-readable summary for AI processing.
 - Add HUMAN_SUMMARY.md: concise human-friendly overview and extension guidance.
 - Document extension points for adding packages, scripts, and configs to the ISO builds.
@@ -139,4 +154,3 @@ Future considerations
 - Docs: README rewrite with upstream credits, install/recovery overview, and included tooling
 - Docs: README formatting fix for installer example (use fenced code block)
 - Docs: Prefer scripts/build-iso.sh helper for building ISOs; keep manual nix build commands as advanced fallback
-
