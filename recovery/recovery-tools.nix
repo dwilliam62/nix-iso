@@ -275,7 +275,8 @@ in
 
   # Provide a starter configuration at /etc/nixos/configuration.nix
   # so users can quickly edit and run nixos-install.
-  environment.etc."nixos/configuration.nix".text = ''
+  environment.etc."nixos/configuration.nix" = {
+    text = ''
     { pkgs, ... }:
     {
       imports = [ ./hardware-configuration.nix ];
@@ -331,5 +332,7 @@ in
 
       system.stateVersion = "25.11";
     }
-  '';
+    '';
+    mode = "0644";
+  };
 }

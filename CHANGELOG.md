@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2025-12-26] ddubsos-iso
+
+- ZaneyOS-next new host wasn't owned by user
+
 ## [2025-12-24] ddubsos-iso
 
 - Set ddubsos-iso branchd as default in GitHub
