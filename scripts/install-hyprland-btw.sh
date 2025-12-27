@@ -271,13 +271,13 @@ awk -v newuser="$USERNAME" '
   { print }
 ' ./configuration.nix > ./configuration.nix.tmp && mv ./configuration.nix.tmp ./configuration.nix
 
-# Configure ly display manager: hide system users and set default user
+# Configure ly display manager: hide system users from login
 echo -e "${GREEN}Configuring login manager...${NC}"
-awk -v defuser="$USERNAME" '
+awk '
   /^[[:space:]]*pbigclock = true;/ {
     print
-    print "        hideUsers = \"root,nobody,_flatpak,systemd-timesync,systemd-network,systemd-resolve,systemd-coredump,ntp\";"
-    print "        initial_login = \"" defuser "\";";
+    # Add hideUsers as a simple string (INI format)
+    print "        hideUsers = \"root,nobody,_flatpak,systemd-timesync,systemd-network,systemd-resolve,systemd-coredump,ntp,nixbld,nixbld1,nixbld2,nixbld3,nixbld4,nixbld5,nixbld6,nixbld7,nixbld8,nixbld9,nixbld10\";"
     next
   }
   { print }
