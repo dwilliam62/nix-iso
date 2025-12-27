@@ -273,11 +273,14 @@ awk -v newuser="$USERNAME" '
 
 # Note: The hideUsers setting is added to ly settings above
 
-# Add hideUsers to ly settings block to hide nix build users (all 32)
+# Configure ly to only show normal users (UID >= 1000) and hide system users
+echo -e "${GREEN}Configuring ly to filter user visibility...${NC}"
 awk '
   /^[[:space:]]*clock_color = / {
     print
-    print "        hideUsers = \"root,nobody,_flatpak,systemd-timesync,systemd-network,systemd-resolve,systemd-coredump,ntp,nixbld,nixbld1,nixbld2,nixbld3,nixbld4,nixbld5,nixbld6,nixbld7,nixbld8,nixbld9,nixbld10,nixbld11,nixbld12,nixbld13,nixbld14,nixbld15,nixbld16,nixbld17,nixbld18,nixbld19,nixbld20,nixbld21,nixbld22,nixbld23,nixbld24,nixbld25,nixbld26,nixbld27,nixbld28,nixbld29,nixbld30,nixbld31,nixbld32\";"
+    print "        # Only show normal users (UID >= 1000), hide system/nix build users"
+    print "        min_uid = 1000;"
+    print "        max_uid = 60000;"
     next
   }
   { print }
