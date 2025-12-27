@@ -276,7 +276,7 @@ echo -e "${GREEN}Configuring login manager to hide system users...${NC}"
 awk '
   /^[[:space:]]*pbigclock = true;/ {
     print
-    print "        hideUsers = [\"root\" \"nobody\" \"_flatpak\" \"systemd-timesync\" \"systemd-network\" \"systemd-resolve\" \"systemd-coredump\" \"ntp\"];";
+    print "        hideUsers = \"root,nobody,_flatpak,systemd-timesync,systemd-network,systemd-resolve,systemd-coredump,ntp\";";
     next
   }
   { print }
