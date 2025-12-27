@@ -271,12 +271,13 @@ awk -v newuser="$USERNAME" '
   { print }
 ' ./configuration.nix > ./configuration.nix.tmp && mv ./configuration.nix.tmp ./configuration.nix
 
-# Hide system users from login manager (ly will only show real users)
-echo -e "${GREEN}Configuring login manager to hide system users...${NC}"
-awk '
+# Configure ly display manager: hide system users and set default user
+echo -e "${GREEN}Configuring login manager...${NC}"
+awk -v defuser="$USERNAME" '
   /^[[:space:]]*pbigclock = true;/ {
     print
-    print "        hideUsers = \"root,nobody,_flatpak,systemd-timesync,systemd-network,systemd-resolve,systemd-coredump,ntp\";";
+    print "        hideUsers = \"root,nobody,_flatpak,systemd-timesync,systemd-network,systemd-resolve,systemd-coredump,ntp\";"
+    print "        initial_login = \"" defuser "\";";
     next
   }
   { print }
@@ -312,10 +313,17 @@ nixos-install --flake ".#$HOSTNAME" --option accept-flake-config true
 if [ $? -eq 0 ]; then
   print_header "Post-Installation Setup"
   
-  # Fix ownership of hyprland-btw directory
+  # Fix ownership of hyprland-btw directory (using UID/GID from mounted system)
   echo -e "${BLUE}Fixing ownership of hyprland-btw...${NC}"
-  chroot /mnt chown -R "$USERNAME:users" "/home/$USERNAME/hyprland-btw" 2>/dev/null || true
-  echo -e "${GREEN}✓ Ownership fixed${NC}"
+  # Get the UID and GID of the user from the mounted system
+  USER_UID=$(awk -F: -v u="$USERNAME" '$1==u {print $3}' /mnt/etc/passwd)
+  USER_GID=$(awk -F: -v u="$USERNAME" '$1==u {print $4}' /mnt/etc/passwd)
+  if [ -n "$USER_UID" ] && [ -n "$USER_GID" ]; then
+    chown -R "$USER_UID:$USER_GID" "/mnt/home/$USERNAME/hyprland-btw"
+    echo -e "${GREEN}✓ Ownership fixed (UID:$USER_UID GID:$USER_GID)${NC}"
+  else
+    echo -e "${YELLOW}⚠ Could not determine user UID/GID, skipping ownership fix${NC}"
+  fi
   echo
   
   print_header "Setting User Password"
