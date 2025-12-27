@@ -271,6 +271,17 @@ awk -v newuser="$USERNAME" '
   { print }
 ' ./configuration.nix > ./configuration.nix.tmp && mv ./configuration.nix.tmp ./configuration.nix
 
+# Hide system users from login manager (ly will only show real users)
+echo -e "${GREEN}Configuring login manager to hide system users...${NC}"
+awk '
+  /^[[:space:]]*pbigclock = true;/ {
+    print
+    print "        hideUsers = [\"root\" \"nobody\" \"_flatpak\" \"systemd-timesync\" \"systemd-network\" \"systemd-resolve\" \"systemd-coredump\" \"ntp\"];";
+    next
+  }
+  { print }
+' ./configuration.nix > ./configuration.nix.tmp && mv ./configuration.nix.tmp ./configuration.nix
+
 # Update flake.nix
 awk -v hn="$HOSTNAME" -v un="$USERNAME" '
   /nixosConfigurations\.hyprland-btw = / { sub(/nixosConfigurations\.hyprland-btw/, "nixosConfigurations." hn); }
@@ -307,7 +318,7 @@ if [ $? -eq 0 ]; then
   echo -e "${GREEN}✓ Ownership fixed${NC}"
   echo
   
-  print_header "Setting Passwords"
+  print_header "Setting User Password"
   
   # Set user password
   echo -e "${YELLOW}Setting password for user '$USERNAME'...${NC}"
@@ -323,26 +334,13 @@ if [ $? -eq 0 ]; then
     fi
   done
   
-  # Set root password
-  echo -e "${YELLOW}Setting password for root...${NC}"
-  while true; do
-    read -rs -p "Password for root: " ROOT_PW1; echo >&2
-    read -rs -p "Confirm password for root: " ROOT_PW2; echo >&2
-    if [ "$ROOT_PW1" = "$ROOT_PW2" ]; then
-      ROOT_HASH=$(printf %s "$ROOT_PW1" | openssl passwd -6 -stdin)
-      unset ROOT_PW1 ROOT_PW2
-      break
-    else
-      echo -e "${RED}Passwords do not match. Please try again.${NC}" >&2
-    fi
-  done
-  
-  echo -e "${BLUE}Setting root password...${NC}"
-  chroot /mnt sed -i "s|^root:[^:]*:|root:${ROOT_HASH}:|" /etc/shadow
-  echo -e "${GREEN}✓ Root password set${NC}"
-  
   echo -e "${BLUE}Setting password for user '$USERNAME'...${NC}"
-  chroot /mnt sed -i "s|^${USERNAME}:[^:]*:|${USERNAME}:${USER_HASH}:|" /etc/shadow
+  # Directly modify shadow file on /mnt (not in chroot, to avoid missing tools)
+  awk -v user="$USERNAME" -v hash="$USER_HASH" -F: '
+    $1 == user { $2 = hash; print; next }
+    { print }
+  ' OFS=: /mnt/etc/shadow > /mnt/etc/shadow.tmp && mv /mnt/etc/shadow.tmp /mnt/etc/shadow
+  chmod 000 /mnt/etc/shadow
   echo -e "${GREEN}✓ User password set${NC}"
   echo
   
