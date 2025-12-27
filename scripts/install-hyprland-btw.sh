@@ -359,13 +359,12 @@ echo -e "${GREEN}✓ Configuration accepted. Starting installation...${NC}"
 echo ""
 
 # Patch configuration.nix with chosen timezone, hostname, username, and layouts
-sed -i -E 's|(^\\s*time\\.timeZone\\s*=\\s*\\\").*(\\\";)|\\1'\"$timeZone\"'\\2|' ./configuration.nix
-
-# Update hostname (inside networking block, not networking.hostName)
-sed -i -E 's|(^\\s*hostName\\s*=\\s*\\\").*(\\\";)|\\1'\"$hostName\"'\\2|' ./configuration.nix
+echo -e "${BLUE}Updating configuration.nix...${NC}"
+sed -i "s/time\.timeZone = \"[^\"]*\";/time.timeZone = \"$timeZone\";/" ./configuration.nix
+sed -i "s/hostName = \"[^\"]*\";/hostName = \"$hostName\";/" ./configuration.nix
 
 # Determine the currently-declared primary user in configuration.nix
-CURRENT_DECLARED_USER=$(sed -n -E 's/.*users\\.users\\.\"([^\"]+)\"\\s*=\\s*\\{.*/\\1/p' ./configuration.nix | head -n1 || true)
+CURRENT_DECLARED_USER=$(sed -n 's/.*users\.users\."\([^"]*\)".*/\1/p' ./configuration.nix | head -n1)
 if [ -z "$CURRENT_DECLARED_USER" ]; then
   CURRENT_DECLARED_USER="dwilliams"
 fi
@@ -374,87 +373,80 @@ fi
 if [ "$userName" != "$CURRENT_DECLARED_USER" ]; then
   echo -e "${YELLOW}Primary user changed: ${CURRENT_DECLARED_USER} -> ${userName}. Adding new user entry.${NC}"
   # Ensure users.mutableUsers = true so undeclared users are not removed
-  if grep -qE '\\busers\\.mutableUsers\\b' ./configuration.nix; then
-    sed -i 's|users\\.mutableUsers = .*;|users.mutableUsers = true;|' ./configuration.nix
+  if grep -q "users\.mutableUsers" ./configuration.nix; then
+    sed -i 's/users\.mutableUsers = .*/users.mutableUsers = true;/' ./configuration.nix
   else
-    sed -i '/nix\\.settings\\.experimental-features/a\\  users.mutableUsers = true;' ./configuration.nix
+    sed -i '/nix\.settings\.experimental-features/a\  users.mutableUsers = true;' ./configuration.nix
   fi
   # Add new user entry if it doesn't already exist
-  if ! grep -qE "users\\.users\\\\.\\\"${userName}\\\"\\s*=\\s*\\{" ./configuration.nix; then
+  if ! grep -q "users\.users\.\"$userName\"" ./configuration.nix; then
+    # Find the closing brace of the first users.users block and insert after it
     awk -v newuser="$userName" '
-      BEGIN{added=0}
-      {
-        print $0
-        if(!added && $0 ~ /users\\.users\\.\"([^\"]+)\"\\s*=\\s*\\{/){
-          inblk=1
-        }
-        if(inblk && $0 ~ /^\\s*};\\s*$/ && !added){
+      /users\.users\."[^"]*" = \{/,/^  \};/ {
+        print
+        if (/^  \};$/ && !added) {
           print ""
-          print "  users.users.\\\"" newuser "\\\" = {"
+          print "  users.users.\"" newuser "\" = {"
           print "    isNormalUser = true;"
-          print "    extraGroups = [ \\\"wheel\\\" \\\"input\\\" ];"
+          print "    extraGroups = [\"wheel\" \"input\"];"
           print "    shell = pkgs.zsh;"
           print "  };"
-          added=1; inblk=0
+          added=1
         }
+        next
       }
-      END{ if(!added){
-        print ""
-        print "  users.users.\\\"" newuser "\\\" = {"
-        print "    isNormalUser = true;"
-        print "    extraGroups = [ \\\"wheel\\\" \\\"input\\\" ];"
-        print "    shell = pkgs.zsh;"
-        print "  };"
-      }}
+      {print}
     ' ./configuration.nix > ./configuration.nix.tmp && mv ./configuration.nix.tmp ./configuration.nix
   fi
 else
-  echo -e "${GREEN}Primary username unchanged (${userName}); leaving users.users entries as-is.${NC}"
+  echo -e "${GREEN}Primary username unchanged (${userName}).${NC}"
 fi
 
 # Update console keymap and XKB layout
-sed -i "s|console.keyMap = \\\".*\\\";|console.keyMap = \\\"$consoleKeyMap\\\";|" ./configuration.nix
-sed -i "s|xserver.xkb.layout = \\\".*\\\";|xserver.xkb.layout = \\\"$keyboardLayout\\\";|" ./configuration.nix
+sed -i "s/console\.keyMap = \"[^\"]*\";/console.keyMap = \"$consoleKeyMap\";/" ./configuration.nix
+sed -i "s/xserver\.xkb\.layout = \"[^\"]*\";/xserver.xkb.layout = \"$keyboardLayout\";/" ./configuration.nix
 
 # Toggle VM guest services based on GPU profile
 if [ "$GPU_PROFILE" = "vm" ]; then
-  sed -i "s|vm.guest-services.enable = .*;|vm.guest-services.enable = true;|" ./configuration.nix
+  sed -i "s/vm\.guest-services\.enable = .*/vm.guest-services.enable = true;/" ./configuration.nix
 else
-  sed -i "s|vm.guest-services.enable = .*;|vm.guest-services.enable = false;|" ./configuration.nix
+  sed -i "s/vm\.guest-services\.enable = .*/vm.guest-services.enable = false;/" ./configuration.nix
 fi
 
 # Enable the matching GPU driver module and disable the others
+echo -e "${BLUE}Configuring GPU drivers for profile: ${GPU_PROFILE}${NC}"
 case "$GPU_PROFILE" in
   amd)
-    sed -i "s|drivers.amdgpu.enable = .*;|drivers.amdgpu.enable = true;|" ./configuration.nix
-    sed -i "s|drivers.intel.enable = .*;|drivers.intel.enable = false;|" ./configuration.nix
-    sed -i "s|drivers.nvidia.enable = .*;|drivers.nvidia.enable = false;|" ./configuration.nix
+    sed -i "s/drivers\.amdgpu\.enable = .*/drivers.amdgpu.enable = true;/" ./configuration.nix
+    sed -i "s/drivers\.intel\.enable = .*/drivers.intel.enable = false;/" ./configuration.nix
+    sed -i "s/drivers\.nvidia\.enable = .*/drivers.nvidia.enable = false;/" ./configuration.nix
     ;;
   intel)
-    sed -i "s|drivers.amdgpu.enable = .*;|drivers.amdgpu.enable = false;|" ./configuration.nix
-    sed -i "s|drivers.intel.enable = .*;|drivers.intel.enable = true;|" ./configuration.nix
-    sed -i "s|drivers.nvidia.enable = .*;|drivers.nvidia.enable = false;|" ./configuration.nix
+    sed -i "s/drivers\.amdgpu\.enable = .*/drivers.amdgpu.enable = false;/" ./configuration.nix
+    sed -i "s/drivers\.intel\.enable = .*/drivers.intel.enable = true;/" ./configuration.nix
+    sed -i "s/drivers\.nvidia\.enable = .*/drivers.nvidia.enable = false;/" ./configuration.nix
     ;;
   nvidia)
-    sed -i "s|drivers.amdgpu.enable = .*;|drivers.amdgpu.enable = false;|" ./configuration.nix
-    sed -i "s|drivers.intel.enable = .*;|drivers.intel.enable = false;|" ./configuration.nix
-    sed -i "s|drivers.nvidia.enable = .*;|drivers.nvidia.enable = true;|" ./configuration.nix
+    sed -i "s/drivers\.amdgpu\.enable = .*/drivers.amdgpu.enable = false;/" ./configuration.nix
+    sed -i "s/drivers\.intel\.enable = .*/drivers.intel.enable = false;/" ./configuration.nix
+    sed -i "s/drivers\.nvidia\.enable = .*/drivers.nvidia.enable = true;/" ./configuration.nix
     ;;
   vm|*)
-    # VM / unknown: leave all hardware drivers disabled; virtio/VM driver is used
-    sed -i "s|drivers.amdgpu.enable = .*;|drivers.amdgpu.enable = false;|" ./configuration.nix
-    sed -i "s|drivers.intel.enable = .*;|drivers.intel.enable = false;|" ./configuration.nix
-    sed -i "s|drivers.nvidia.enable = .*;|drivers.nvidia.enable = false;|" ./configuration.nix
+    sed -i "s/drivers\.amdgpu\.enable = .*/drivers.amdgpu.enable = false;/" ./configuration.nix
+    sed -i "s/drivers\.intel\.enable = .*/drivers.intel.enable = false;/" ./configuration.nix
+    sed -i "s/drivers\.nvidia\.enable = .*/drivers.nvidia.enable = false;/" ./configuration.nix
     ;;
 esac
 
-# Update flake.nix: rename nixosConfigurations.<name> to the chosen hostname
-sed -i -E 's|(nixosConfigurations\\.)[A-Za-z0-9._-]+(\\s*=)|\\1'\"$hostName\"'\\2|' ./flake.nix
+# Update flake.nix: both nixosConfigurations name AND home-manager username
+echo -e "${BLUE}Updating flake.nix...${NC}"
+sed -i "s/nixosConfigurations\.hyprland-btw =/nixosConfigurations.$hostName =/" ./flake.nix
+sed -i "s|users\.\"[^\"]*\" = import ./home\.nix;|users.\"$userName\" = import ./home.nix;|" ./flake.nix
 
-# Update flake.nix and home.nix to reflect the new username
-sed -i -E 's|users\\.\"[^\"]+\"\\s*=\\s*import \\./home\\.nix;|users.\"'\"$userName\"'\" = import ./home.nix;|' ./flake.nix
-sed -i -E 's|home\\.username = lib\\.mkDefault \".*\";|home.username = lib.mkDefault '\"\\\"$userName\\\"\"';|' ./home.nix
-sed -i -E 's|home\\.homeDirectory = lib\\.mkDefault \"/home/.*\";|home.homeDirectory = lib.mkDefault '\"\\\"/home/$userName\\\"\"';|' ./home.nix
+# Update home.nix
+echo -e "${BLUE}Updating home.nix...${NC}"
+sed -i "s/\([ ]*\)username = lib\.mkDefault \"[^\"]*\";/\1username = lib.mkDefault \"$userName\";/" ./home.nix
+sed -i "s|\([ ]*\)homeDirectory = lib\.mkDefault \"/home/[^\"]*\";|\1homeDirectory = lib.mkDefault \"/home/$userName\";|" ./home.nix
 
 print_header "Hardware Configuration"
 
@@ -580,8 +572,9 @@ fi
 
 print_header "Running nixos-rebuild (boot)"
 
+echo -e "${BLUE}Building with hostname: $hostName and user: $userName${NC}"
 FLAKE_TARGET="#${hostName}"
-if sudo nixos-rebuild boot --flake .${FLAKE_TARGET} --option accept-flake-config true --refresh; then
+if sudo nixos-rebuild boot --flake .${FLAKE_TARGET} --option accept-flake-config true --refresh --allow-dirty; then
   print_success_banner
   echo ""
   echo -e "${CYAN}After reboot, set passwords using:${NC}"
