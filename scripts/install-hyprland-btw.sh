@@ -271,27 +271,13 @@ awk -v newuser="$USERNAME" '
   { print }
 ' ./configuration.nix > ./configuration.nix.tmp && mv ./configuration.nix.tmp ./configuration.nix
 
-# Add NixOS configuration to hide system/build users from login manager
-# Note: ly may still show some system users - this is a known ly limitation
-echo -e "${GREEN}Configuring NixOS to hide system users...${NC}"
-awk '
-  /^  system\.stateVersion = / {
-    print "  # Hide nix build users from login managers by marking them as system users"
-    print "  users.nix = {"
-    print "    nrBuildUsers = 32;  # Total number of build users"
-    print "  };" 
-    print ""
-    print $0
-    next
-  }
-  { print }
-' ./configuration.nix > ./configuration.nix.tmp && mv ./configuration.nix.tmp ./configuration.nix
+# Note: The hideUsers setting is added to ly settings above
 
-# Add hideUsers to ly settings block to hide nix build users
+# Add hideUsers to ly settings block to hide nix build users (all 32)
 awk '
   /^[[:space:]]*clock_color = / {
     print
-    print "        hideUsers = \"root,nobody,_flatpak,systemd-timesync,systemd-network,systemd-resolve,systemd-coredump,ntp,nixbld,nixbld1,nixbld2,nixbld3,nixbld4,nixbld5,nixbld6,nixbld7,nixbld8,nixbld9,nixbld10\";"
+    print "        hideUsers = \"root,nobody,_flatpak,systemd-timesync,systemd-network,systemd-resolve,systemd-coredump,ntp,nixbld,nixbld1,nixbld2,nixbld3,nixbld4,nixbld5,nixbld6,nixbld7,nixbld8,nixbld9,nixbld10,nixbld11,nixbld12,nixbld13,nixbld14,nixbld15,nixbld16,nixbld17,nixbld18,nixbld19,nixbld20,nixbld21,nixbld22,nixbld23,nixbld24,nixbld25,nixbld26,nixbld27,nixbld28,nixbld29,nixbld30,nixbld31,nixbld32\";"
     next
   }
   { print }
