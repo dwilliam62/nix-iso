@@ -273,18 +273,9 @@ awk -v newuser="$USERNAME" '
 
 # Note: The hideUsers setting is added to ly settings above
 
-# Configure ly to only show normal users (UID >= 1000) and hide system users
-echo -e "${GREEN}Configuring ly to filter user visibility...${NC}"
-awk '
-  /^[[:space:]]*clock_color = / {
-    print
-    print "        # Only show normal users (UID >= 1000), hide system/nix build users"
-    print "        min_uid = 1000;"
-    print "        max_uid = 60000;"
-    next
-  }
-  { print }
-' ./configuration.nix > ./configuration.nix.tmp && mv ./configuration.nix.tmp ./configuration.nix
+# Note: ly display manager configuration is in hyprland-btw/configuration.nix
+# If you want to switch from ly to greetd with tuigreet for better user filtering,
+# see the commented-out ly configuration and greetd setup in configuration.nix
 
 # Update flake.nix
 awk -v hn="$HOSTNAME" -v un="$USERNAME" '
