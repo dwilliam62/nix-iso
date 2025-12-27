@@ -243,12 +243,12 @@ print_header "Configuring hyprland-btw"
 
 # Update configuration.nix
 cp ./configuration.nix ./configuration.nix.bak
-awk -v tz="$TIMEZONE" '/^  time\.timeZone = / { sub(/"[^"]*"/, "\"" tz "\""); } { print }' ./configuration.nix.bak > ./configuration.nix
-awk -v hn="$HOSTNAME" '/^    hostName = / { sub(/"[^"]*"/, "\"" hn "\""); } { print }' ./configuration.nix > ./configuration.nix.tmp && mv ./configuration.nix.tmp ./configuration.nix
-awk -v ckm="$KEYBOARD" -v kbl="$KEYBOARD" '\
-  /^    console\.keyMap = / { sub(/"[^"]*"/, "\"" ckm "\""); }\
-  /^    xserver\.xkb\.layout = / { sub(/"[^"]*"/, "\"" kbl "\""); }\
-  { print }\
+awk -v tz="$TIMEZONE" '/^  time\.timeZone = / { sub(/= "[^"]*"/, "= \"" tz "\""); } { print }' ./configuration.nix.bak > ./configuration.nix
+awk -v hn="$HOSTNAME" '/^    hostName = / { sub(/= "[^"]*"/, "= \"" hn "\""); } { print }' ./configuration.nix > ./configuration.nix.tmp && mv ./configuration.nix.tmp ./configuration.nix
+awk -v ckm="$KEYBOARD" -v kbl="$KEYBOARD" '
+  /^    console\.keyMap = / { sub(/= "[^"]*"/, "= \"" ckm "\""); }
+  /^    xserver\.xkb\.layout = / { sub(/= "[^"]*"/, "= \"" kbl "\""); }
+  { print }
 ' ./configuration.nix > ./configuration.nix.tmp && mv ./configuration.nix.tmp ./configuration.nix
 
 # Set GPU drivers
@@ -267,36 +267,36 @@ esac
 # Add new user if different from default
 if [ "$USERNAME" != "dwilliams" ]; then
   echo -e "${GREEN}Creating user entry for $USERNAME...${NC}"
-  awk -v newuser="$USERNAME" '\
-    /^  users\.users\.\"dwilliams\" = \{/,/^  \};/ {\
-      print\
-      if (/^  \};$/ && !added) {\
-        print ""\
-        print "  users.users.\"" newuser "\" = {"\
-        print "    isNormalUser = true;"\
-        print "    extraGroups = [\"wheel\" \"input\"];"\
-        print "    shell = pkgs.zsh;"\
-        print "  };"\
-        added=1\
-      }\
-      next\
-    }\
-    { print }\
+  awk -v newuser="$USERNAME" '
+    /^  users\.users\."dwilliams" = \{/,/^  \};/ {
+      print
+      if (/^  \};$/ && !added) {
+        print ""
+        print "  users.users.\"" newuser "\" = {"
+        print "    isNormalUser = true;"
+        print "    extraGroups = [\"wheel\" \"input\"];"
+        print "    shell = pkgs.zsh;"
+        print "  };"
+        added=1
+      }
+      next
+    }
+    { print }
   ' ./configuration.nix > ./configuration.nix.tmp && mv ./configuration.nix.tmp ./configuration.nix
 fi
 
 # Update flake.nix
-awk -v hn="$HOSTNAME" -v un="$USERNAME" '\
-  /^    nixosConfigurations\.hyprland-btw = / { sub(/nixosConfigurations\.hyprland-btw/, "nixosConfigurations." hn); }\
-  /^            users\.\"[^\"]*\" = import \.\/home\.nix;/ { sub(/users\."[^"]*" = import \.\/home\.nix;/, "users.\"" un "\" = import ./home.nix;"); }\
-  { print }\
+awk -v hn="$HOSTNAME" -v un="$USERNAME" '
+  /nixosConfigurations\.hyprland-btw = / { sub(/nixosConfigurations\.hyprland-btw/, "nixosConfigurations." hn); }
+  /users\."[^"]*" = import \.\/home\.nix;/ { sub(/users\."[^"]*"/, "users.\"" un "\""); }
+  { print }
 ' ./flake.nix > ./flake.nix.tmp && mv ./flake.nix.tmp ./flake.nix
 
 # Update home.nix
-awk -v un="$USERNAME" '\
-  /^[[:space:]]*username = lib\.mkDefault / { sub(/"[^"]*"/, "\"" un "\""); }\
-  /^[[:space:]]*homeDirectory = lib\.mkDefault / { sub(/\"\/home\/[^"]*\"/, "\"/home/" un "\""); }\
-  { print }\
+awk -v un="$USERNAME" '
+  /username = lib\.mkDefault / { sub(/"[^"]*"/, "\"" un "\""); }
+  /homeDirectory = lib\.mkDefault / { sub(/"[^"]*"/, "\"" "/home/" un "\""); }
+  { print }
 ' ./home.nix > ./home.nix.tmp && mv ./home.nix.tmp ./home.nix
 
 rm -f ./configuration.nix.bak
