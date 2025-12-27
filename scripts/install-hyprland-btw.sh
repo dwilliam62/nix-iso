@@ -574,7 +574,7 @@ print_header "Running nixos-rebuild (boot)"
 
 echo -e "${BLUE}Building with hostname: $hostName and user: $userName${NC}"
 FLAKE_TARGET="#${hostName}"
-if sudo nixos-rebuild boot --flake .${FLAKE_TARGET} --option accept-flake-config true --refresh --allow-dirty; then
+if sudo nixos-rebuild boot --flake .${FLAKE_TARGET} --option accept-flake-config true --refresh; then
   print_success_banner
   echo ""
   echo -e "${CYAN}After reboot, set passwords using:${NC}"
