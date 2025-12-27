@@ -246,7 +246,7 @@ cp ./configuration.nix ./configuration.nix.bak
 awk -v tz="$TIMEZONE" '/^  time\.timeZone = / { sub(/= "[^"]*"/, "= \"" tz "\""); } { print }' ./configuration.nix.bak > ./configuration.nix
 awk -v hn="$HOSTNAME" '/^    hostName = / { sub(/= "[^"]*"/, "= \"" hn "\""); } { print }' ./configuration.nix > ./configuration.nix.tmp && mv ./configuration.nix.tmp ./configuration.nix
 awk -v ckm="$KEYBOARD" -v kbl="$KEYBOARD" '
-  /^    console\.keyMap = / { sub(/= "[^"]*"/, "= \"" ckm "\""); }
+  /^  console\.keyMap = / { sub(/= "[^"]*"/, "= \"" ckm "\""); }
   /^    xserver\.xkb\.layout = / { sub(/= "[^"]*"/, "= \"" kbl "\""); }
   { print }
 ' ./configuration.nix > ./configuration.nix.tmp && mv ./configuration.nix.tmp ./configuration.nix
