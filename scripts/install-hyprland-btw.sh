@@ -360,8 +360,8 @@ echo ""
 
 # Patch configuration.nix with chosen timezone, hostname, username, and layouts
 echo -e "${BLUE}Updating configuration.nix...${NC}"
-sed -i "s/time\.timeZone = \"[^\"]*\";/time.timeZone = \"$timeZone\";/" ./configuration.nix
-sed -i "s/hostName = \"[^\"]*\";/hostName = \"$hostName\";/" ./configuration.nix
+sed -i 's/time\.timeZone = "[^"]*";/time.timeZone = "'"$timeZone"'";/' ./configuration.nix
+sed -i 's/hostName = "[^"]*";/hostName = "'"$hostName"'";/' ./configuration.nix
 
 # Determine the currently-declared primary user in configuration.nix
 CURRENT_DECLARED_USER=$(sed -n 's/.*users\.users\."\([^"]*\)".*/\1/p' ./configuration.nix | head -n1)
@@ -403,8 +403,8 @@ else
 fi
 
 # Update console keymap and XKB layout
-sed -i "s/console\.keyMap = \"[^\"]*\";/console.keyMap = \"$consoleKeyMap\";/" ./configuration.nix
-sed -i "s/xserver\.xkb\.layout = \"[^\"]*\";/xserver.xkb.layout = \"$keyboardLayout\";/" ./configuration.nix
+sed -i 's/console\.keyMap = "[^"]*";/console.keyMap = "'"$consoleKeyMap"'";/' ./configuration.nix
+sed -i 's/xserver\.xkb\.layout = "[^"]*";/xserver.xkb.layout = "'"$keyboardLayout"'";/' ./configuration.nix
 
 # Toggle VM guest services based on GPU profile
 if [ "$GPU_PROFILE" = "vm" ]; then
@@ -440,8 +440,8 @@ esac
 
 # Update flake.nix: both nixosConfigurations name AND home-manager username
 echo -e "${BLUE}Updating flake.nix...${NC}"
-sed -i "s/nixosConfigurations\.hyprland-btw =/nixosConfigurations.$hostName =/" ./flake.nix
-sed -i "s|users\.\"[^\"]*\" = import ./home\.nix;|users.\"$userName\" = import ./home.nix;|" ./flake.nix
+sed -i 's/nixosConfigurations\.hyprland-btw =/nixosConfigurations.'"$hostName"' =/' ./flake.nix
+sed -i 's/users\."[^"]*" = import \.\/home\.nix;/users."'"$userName"'" = import ./home.nix;/' ./flake.nix
 
 # Update home.nix
 echo -e "${BLUE}Updating home.nix...${NC}"
