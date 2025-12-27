@@ -360,8 +360,10 @@ echo ""
 
 # Patch configuration.nix with chosen timezone, hostname, username, and layouts
 echo -e "${BLUE}Updating configuration.nix...${NC}"
-sed -i "s|time\.timeZone = \"[^\"]*\";|time.timeZone = \"${timeZone}\";\"|" ./configuration.nix
-sed -i "s|hostName = \"[^\"]*\";|hostName = \"${hostName}\";\"|" ./configuration.nix
+cp ./configuration.nix ./configuration.nix.bak
+awk -v tz="$timeZone" '/^  time\.timeZone = / { sub(/"[^"]*"/, "\"" tz "\""); } { print }' ./configuration.nix.bak > ./configuration.nix
+awk -v hn="$hostName" '/^    hostName = / { sub(/"[^"]*"/, "\"" hn "\""); } { print }' ./configuration.nix > ./configuration.nix.tmp && mv ./configuration.nix.tmp ./configuration.nix
+rm ./configuration.nix.bak
 
 # Determine the currently-declared primary user in configuration.nix
 CURRENT_DECLARED_USER=$(sed -n 's/.*users\.users\."\([^"]*\)".*/\1/p' ./configuration.nix | head -n1)
@@ -403,8 +405,13 @@ else
 fi
 
 # Update console keymap and XKB layout
-sed -i "s|console\.keyMap = \"[^\"]*\";|console.keyMap = \"${consoleKeyMap}\";\"|" ./configuration.nix
-sed -i "s|xserver\.xkb\.layout = \"[^\"]*\";|xserver.xkb.layout = \"${keyboardLayout}\";\"|" ./configuration.nix
+cp ./configuration.nix ./configuration.nix.bak
+awk -v ckm="$consoleKeyMap" -v kbl="$keyboardLayout" '
+  /^    console\.keyMap = / { sub(/"[^"]*"/, "\"" ckm "\""); }
+  /^    xserver\.xkb\.layout = / { sub(/"[^"]*"/, "\"" kbl "\""); }
+  { print }
+' ./configuration.nix.bak > ./configuration.nix
+rm ./configuration.nix.bak
 
 # Toggle VM guest services based on GPU profile
 if [ "$GPU_PROFILE" = "vm" ]; then
@@ -440,13 +447,23 @@ esac
 
 # Update flake.nix: both nixosConfigurations name AND home-manager username
 echo -e "${BLUE}Updating flake.nix...${NC}"
-sed -i "s|nixosConfigurations\.hyprland-btw =|nixosConfigurations.${hostName} =|" ./flake.nix
-sed -i "s|users\\.\"[^\"]*\" = import ./home\\.nix;|users.\"${userName}\" = import ./home.nix;|" ./flake.nix
+cp ./flake.nix ./flake.nix.bak
+awk -v hn="$hostName" -v un="$userName" '
+  /^    nixosConfigurations\.hyprland-btw = / { sub(/nixosConfigurations\.hyprland-btw =/, "nixosConfigurations." hn " ="); }
+  /^            users\."[^"]*" = import \.\/.home\.nix;/ { sub(/users\."[^"]*" = import \.\/home\.nix;/, "users.\"" un "\" = import ./home.nix;"); }
+  { print }
+' ./flake.nix.bak > ./flake.nix
+rm ./flake.nix.bak
 
 # Update home.nix
 echo -e "${BLUE}Updating home.nix...${NC}"
-sed -i "s|\([ ]*\)username = lib\\.mkDefault \"[^\"]*\";|\1username = lib.mkDefault \"${userName}\";\"|" ./home.nix
-sed -i "s|\([ ]*\)homeDirectory = lib\\.mkDefault \"/home/[^\"]*\";|\1homeDirectory = lib.mkDefault \"/home/${userName}\";\"|" ./home.nix
+cp ./home.nix ./home.nix.bak
+awk -v un="$userName" '
+  /^[[:space:]]*username = lib\.mkDefault / { sub(/"[^"]*"/, "\"" un "\""); }
+  /^[[:space:]]*homeDirectory = lib\.mkDefault / { sub(/"\/home\/[^"]*"/, "\"/home/" un "\""); }
+  { print }
+' ./home.nix.bak > ./home.nix
+rm ./home.nix.bak
 
 print_header "Hardware Configuration"
 
