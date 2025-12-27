@@ -311,6 +311,59 @@ rm -rf ./.git ./.gitmodules 2>/dev/null || true
 print_header "Starting NixOS Installation"
 nixos-install --flake ".#$HOSTNAME" --option accept-flake-config true
 
-echo
-echo -e "${GREEN}Installation complete!${NC}"
-echo "You can now reboot into the installed system."
+# Check if installation succeeded
+if [ $? -eq 0 ]; then
+  print_header "Post-Installation Setup"
+  
+  # Fix ownership of hyprland-btw directory
+  echo -e "${BLUE}Fixing ownership of hyprland-btw...${NC}"
+  chroot /mnt chown -R "$USERNAME:users" "/home/$USERNAME/hyprland-btw" 2>/dev/null || true
+  echo -e "${GREEN}✓ Ownership fixed${NC}"
+  echo
+  
+  print_header "Setting Passwords"
+  
+  # Set user password
+  echo -e "${YELLOW}Setting password for user '$USERNAME'...${NC}"
+  while true; do
+    read -rs -p "Password for user '$USERNAME': " USER_PW1; echo >&2
+    read -rs -p "Confirm password for '$USERNAME': " USER_PW2; echo >&2
+    if [ "$USER_PW1" = "$USER_PW2" ]; then
+      USER_HASH=$(printf %s "$USER_PW1" | openssl passwd -6 -stdin)
+      unset USER_PW1 USER_PW2
+      break
+    else
+      echo -e "${RED}Passwords do not match. Please try again.${NC}" >&2
+    fi
+  done
+  
+  # Set root password
+  echo -e "${YELLOW}Setting password for root...${NC}"
+  while true; do
+    read -rs -p "Password for root: " ROOT_PW1; echo >&2
+    read -rs -p "Confirm password for root: " ROOT_PW2; echo >&2
+    if [ "$ROOT_PW1" = "$ROOT_PW2" ]; then
+      ROOT_HASH=$(printf %s "$ROOT_PW1" | openssl passwd -6 -stdin)
+      unset ROOT_PW1 ROOT_PW2
+      break
+    else
+      echo -e "${RED}Passwords do not match. Please try again.${NC}" >&2
+    fi
+  done
+  
+  echo -e "${BLUE}Setting root password...${NC}"
+  sed -i "s|^root:[^:]*:|root:${ROOT_HASH}:|" /mnt/etc/shadow
+  echo -e "${GREEN}✓ Root password set${NC}"
+  
+  echo -e "${BLUE}Setting password for user '$USERNAME'...${NC}"
+  sed -i "s|^${USERNAME}:[^:]*:|${USERNAME}:${USER_HASH}:|" /mnt/etc/shadow
+  echo -e "${GREEN}✓ User password set${NC}"
+  echo
+  
+  echo -e "${GREEN}╔═══════════════════════════════════════════════════════════════════════╗${NC}"
+  echo -e "${GREEN}║ Installation complete! System is ready to reboot.${NC}"
+  echo -e "${GREEN}╚═══════════════════════════════════════════════════════════════════════╝${NC}"
+else
+  echo -e "${RED}Installation failed!${NC}"
+  exit 1
+fi
