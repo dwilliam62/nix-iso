@@ -264,26 +264,12 @@ case "$GPU_PROFILE" in
     ;;
 esac
 
-# Add new user if different from default
-if [ "$USERNAME" != "dwilliams" ]; then
-  echo -e "${GREEN}Creating user entry for $USERNAME...${NC}"
-  awk -v newuser="$USERNAME" '
-    /^  users\.users\."dwilliams" = \{/,/^  \};/ {
-      print
-      if (/^  \};$/ && !added) {
-        print ""
-        print "  users.users.\"" newuser "\" = {"
-        print "    isNormalUser = true;"
-        print "    extraGroups = [\"wheel\" \"input\"];"
-        print "    shell = pkgs.zsh;"
-        print "  };"
-        added=1
-      }
-      next
-    }
-    { print }
-  ' ./configuration.nix > ./configuration.nix.tmp && mv ./configuration.nix.tmp ./configuration.nix
-fi
+# Replace default dwilliams user with the selected username
+echo -e "${GREEN}Setting up user entry for $USERNAME...${NC}"
+awk -v newuser="$USERNAME" '
+  /^  users\.users\."dwilliams" = \{/ { gsub(/dwilliams/, newuser); }
+  { print }
+' ./configuration.nix > ./configuration.nix.tmp && mv ./configuration.nix.tmp ./configuration.nix
 
 # Update flake.nix
 awk -v hn="$HOSTNAME" -v un="$USERNAME" '
@@ -352,11 +338,11 @@ if [ $? -eq 0 ]; then
   done
   
   echo -e "${BLUE}Setting root password...${NC}"
-  sed -i "s|^root:[^:]*:|root:${ROOT_HASH}:|" /mnt/etc/shadow
+  chroot /mnt sed -i "s|^root:[^:]*:|root:${ROOT_HASH}:|" /etc/shadow
   echo -e "${GREEN}✓ Root password set${NC}"
   
   echo -e "${BLUE}Setting password for user '$USERNAME'...${NC}"
-  sed -i "s|^${USERNAME}:[^:]*:|${USERNAME}:${USER_HASH}:|" /mnt/etc/shadow
+  chroot /mnt sed -i "s|^${USERNAME}:[^:]*:|${USERNAME}:${USER_HASH}:|" /etc/shadow
   echo -e "${GREEN}✓ User password set${NC}"
   echo
   
