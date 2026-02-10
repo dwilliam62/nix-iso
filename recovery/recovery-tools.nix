@@ -277,61 +277,61 @@ in
   # so users can quickly edit and run nixos-install.
   environment.etc."nixos/configuration.nix" = {
     text = ''
-    { pkgs, ... }:
-    {
-      imports = [ ./hardware-configuration.nix ];
+      { pkgs, ... }:
+      {
+        imports = [ ./hardware-configuration.nix ];
 
-      boot = {
-        loader = {
-          systemd-boot.enable = true;
-          efi.canTouchEfiVariables = true;
+        boot = {
+          loader = {
+            systemd-boot.enable = true;
+            efi.canTouchEfiVariables = true;
+          };
+          # Cross-channel zswap configuration using kernel params
+          kernelModules = [ "z3fold" ];
+          kernelParams = [
+            "zswap.enabled=1"
+            "zswap.compressor=zstd"
+            "zswap.max_pool_percent=20"
+            "zswap.zpool=z3fold"
+          ];
         };
-        # Cross-channel zswap configuration using kernel params
-        kernelModules = [ "z3fold" ];
-        kernelParams = [
-          "zswap.enabled=1"
-          "zswap.compressor=zstd"
-          "zswap.max_pool_percent=20"
-          "zswap.zpool=z3fold"
+
+        # Basic system identity — edit these before install
+        networking.hostName = "changeme";
+        networking.networkmanager.enable = true;
+        time.timeZone = "America/New_York";
+        i18n.defaultLocale = "en_US.UTF-8";
+        console.keyMap = "us";
+
+        # Users — default credentials for initial access; change after install
+        users.users.root.initialPassword = "NixOS_rulez!";
+        users.users.dwilliams = {
+          isNormalUser = true;
+          initialPassword = "NixOS_rulez!";
+          extraGroups = [ "wheel" "networkmanager" "input" ];
+        };
+
+        # Package policy and tooling
+        nixpkgs.config.allowUnfree = true;
+        nix.settings.experimental-features = [ "nix-command" "flakes" ];
+
+        # Remote access on the installed system (optional — keep if desired)
+        services.openssh.enable = true;
+
+        # Handy tools inside the installed system as well (trim as needed)
+        environment.systemPackages = with pkgs; [
+          neovim vim gnused gawk ripgrep gnugrep findutils coreutils
+          curl wget pciutils btrfs-progs openssl
+          htop btop atop
         ];
-      };
 
-      # Basic system identity — edit these before install
-      networking.hostName = "changeme";
-      networking.networkmanager.enable = true;
-      time.timeZone = "America/New_York";
-      i18n.defaultLocale = "en_US.UTF-8";
-      console.keyMap = "us";
+        security.sudo = {
+          enable = true;
+          wheelNeedsPassword = false;
+        };
 
-      # Users — default credentials for initial access; change after install
-      users.users.root.initialPassword = "NixOS_rulez!";
-      users.users.dwilliams = {
-        isNormalUser = true;
-        initialPassword = "NixOS_rulez!";
-        extraGroups = [ "wheel" "networkmanager" "input" ];
-      };
-
-      # Package policy and tooling
-      nixpkgs.config.allowUnfree = true;
-      nix.settings.experimental-features = [ "nix-command" "flakes" ];
-
-      # Remote access on the installed system (optional — keep if desired)
-      services.openssh.enable = true;
-
-      # Handy tools inside the installed system as well (trim as needed)
-      environment.systemPackages = with pkgs; [
-        neovim vim gnused gawk ripgrep gnugrep findutils coreutils
-        curl wget pciutils btrfs-progs openssl
-        htop btop atop
-      ];
-
-      security.sudo = {
-        enable = true;
-        wheelNeedsPassword = false;
-      };
-
-      system.stateVersion = "25.11";
-    }
+        system.stateVersion = "25.11";
+      }
     '';
     mode = "0644";
   };

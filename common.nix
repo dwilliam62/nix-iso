@@ -71,6 +71,7 @@
     parted
     efibootmgr
     tmux
+    python3 # ensure python3 interpreter is available for installer helpers
   ];
 
   # Enable guest services; systemd gates them to VMs only.
@@ -157,8 +158,8 @@
   # Prevent idle actions that can lock the user without a password to unlock
   services.logind.settings = {
     Login = {
-      IdleActionSec = "0";  # Don't take idle actions
-      IdleAction = "none";  # Do nothing when idle
+      IdleActionSec = "0"; # Don't take idle actions
+      IdleAction = "none"; # Do nothing when idle
     };
   };
 }
