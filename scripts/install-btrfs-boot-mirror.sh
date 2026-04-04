@@ -246,10 +246,24 @@ mkfs.btrfs -f -L nixos -m raid1 -d raid1 "$P2A" "$P2B"
 # Get the filesystem UUID (same across both devices)
 FSUUID=$(blkid -s UUID -o value "$P2A")
 
+# Wait for /dev/disk/by-uuid to appear (udev may lag after mkfs)
+MOUNT_DEV="/dev/disk/by-uuid/$FSUUID"
+for _ in 1 2 3 4 5 6 7 8 9 10; do
+  if [ -e "$MOUNT_DEV" ]; then
+    break
+  fi
+  udevadm settle || true
+  sleep 1
+done
+if [ ! -e "$MOUNT_DEV" ]; then
+  echo "WARNING: $MOUNT_DEV not found; falling back to $P2A for initial mounts." >&2
+  MOUNT_DEV="$P2A"
+fi
+
 # Subvolumes
 printf '\nCreating subvolumes ...\n'
 mkdir -p /mnt
-mount -o subvolid=5 "/dev/disk/by-uuid/$FSUUID" /mnt
+mount -o subvolid=5 "$MOUNT_DEV" /mnt
 btrfs subvolume create /mnt/@
 btrfs subvolume create /mnt/@home
 btrfs subvolume create /mnt/@nix
@@ -258,11 +272,11 @@ umount /mnt
 
 # Mount target (include /.snapshots)
 printf '\nMounting target ...\n'
-mount -o compress=zstd,discard=async,noatime,subvol=@ "/dev/disk/by-uuid/$FSUUID" /mnt
+mount -o compress=zstd,discard=async,noatime,subvol=@ "$MOUNT_DEV" /mnt
 mkdir -p /mnt/{home,nix,boot,boot2,.snapshots}
-mount -o compress=zstd,discard=async,noatime,subvol=@home "/dev/disk/by-uuid/$FSUUID" /mnt/home
-mount -o compress=zstd,discard=async,noatime,subvol=@nix "/dev/disk/by-uuid/$FSUUID" /mnt/nix
-mount -o compress=zstd,discard=async,noatime,subvol=@snapshots "/dev/disk/by-uuid/$FSUUID" /mnt/.snapshots
+mount -o compress=zstd,discard=async,noatime,subvol=@home "$MOUNT_DEV" /mnt/home
+mount -o compress=zstd,discard=async,noatime,subvol=@nix "$MOUNT_DEV" /mnt/nix
+mount -o compress=zstd,discard=async,noatime,subvol=@snapshots "$MOUNT_DEV" /mnt/.snapshots
 mount "$P1A" /mnt/boot
 mount "$P1B" /mnt/boot2
 
