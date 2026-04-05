@@ -10,7 +10,7 @@
 # - Creates a Btrfs filesystem in RAID1 (data+metadata) across both disks
 # - Creates subvolumes (@, @home, @nix, @snapshots)
 # - Mounts with compress=zstd,discard=async,noatime and mounts both ESPs at /mnt/boot and /mnt/boot2
-# - Generates hardware config and writes a configuration.nix including mirrored systemd-boot
+# - Generates hardware config and writes configuration.nix + hardware-configuration.nix for GRUB mirrored boot
 # - Runs nixos-install (root password will be prompted interactively)
 
 set -euo pipefail
@@ -280,11 +280,71 @@ mount -o compress=zstd,discard=async,noatime,subvol=@snapshots "$MOUNT_DEV" /mnt
 mount "$P1A" /mnt/boot
 mount "$P1B" /mnt/boot2
 
-# Generate hardware config (will include all mounted subvolumes and ESPs)
+# Generate hardware config (will be replaced with a boot-mirror template below)
 nixos-generate-config --root /mnt
 
 # Gather UUIDs for ESPs (for mirroredBoots devices)
+UUID_A=$(blkid -s UUID -o value "$P1A")
 UUID_B=$(blkid -s UUID -o value "$P1B")
+
+# Write hardware-configuration.nix (boot-mirror template, no NFS)
+HWCFG=/mnt/etc/nixos/hardware-configuration.nix
+cat > "$HWCFG" <<NIXHARD
+{ config, lib, pkgs, modulesPath, ... }:
+
+{
+  imports =
+    [ (modulesPath + "/profiles/qemu-guest.nix")
+    ];
+
+  boot.initrd.availableKernelModules = [ "ata_piix" "uhci_hcd" "virtio_pci" "virtio_scsi" "sd_mod" "sr_mod" ];
+  boot.initrd.kernelModules = [ ];
+  boot.kernelModules = [ "kvm-intel" ];
+  boot.extraModulePackages = [ ];
+
+  # --- Btrfs Mirror (RAID1) Configuration ---
+  fileSystems."/" =
+    { device = "/dev/disk/by-uuid/${FSUUID}";
+      fsType = "btrfs";
+      options = [ "subvol=@" "compress=zstd" ];
+    };
+
+  fileSystems."/home" =
+    { device = "/dev/disk/by-uuid/${FSUUID}";
+      fsType = "btrfs";
+      options = [ "subvol=@home" "compress=zstd" ];
+    };
+
+  fileSystems."/nix" =
+    { device = "/dev/disk/by-uuid/${FSUUID}";
+      fsType = "btrfs";
+      options = [ "subvol=@nix" "compress=zstd" "noatime" ];
+    };
+
+  fileSystems."/.snapshots" =
+    { device = "/dev/disk/by-uuid/${FSUUID}";
+      fsType = "btrfs";
+      options = [ "subvol=@snapshots" "compress=zstd" ];
+    };
+
+  # --- Mirrored EFI Partitions ---
+  fileSystems."/boot" =
+    { device = "/dev/disk/by-uuid/${UUID_A}";
+      fsType = "vfat";
+      options = [ "fmask=0022" "dmask=0022" "nofail" ];
+    };
+
+  fileSystems."/boot2" =
+    { device = "/dev/disk/by-uuid/${UUID_B}";
+      fsType = "vfat";
+      options = [ "fmask=0022" "dmask=0022" "nofail" ];
+    };
+
+  swapDevices = [ ];
+
+  nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
+}
+NIXHARD
 
 # Write configuration.nix
 CFG=/mnt/etc/nixos/configuration.nix
@@ -295,18 +355,22 @@ cat > "$CFG" <<NIXCONF
 
   boot = {
     loader = {
-      systemd-boot = {
-        enable = true;
-        # NOTE: mirroredBoots is commented out to avoid infinite recursion
-        # Uncomment the following lines if your NixOS version supports mirroredBoots:
-        # mirroredBoots = [
-        #   {
-        #     path = "/boot2";
-        #     devices = [ "/dev/disk/by-uuid/${UUID_B}" ];
-        #   }
-        # ];
-      };
       efi.canTouchEfiVariables = true;
+      grub = {
+        enable = true;
+        device = "nodev";
+        efiSupport = true;
+        mirroredBoots = [
+          {
+            path = "/boot";
+            devices = [ "/dev/disk/by-uuid/${UUID_A}" ];
+          }
+          {
+            path = "/boot2";
+            devices = [ "/dev/disk/by-uuid/${UUID_B}" ];
+          }
+        ];
+      };
     };
     kernelModules = [ "z3fold" ];
     kernelParams = [
@@ -335,13 +399,21 @@ ${HASH_LINE:+${HASH_LINE}}
   environment.systemPackages = with pkgs; [
     git ncftp htop btop pciutils btrfs-progs wget curl
     neovim gnused gawk ripgrep gnugrep findutils coreutils
+    tmux luarocks python3 yazi shared-mime-info
   ];
 
-  programs.mtr.enable = true;
-  programs.neovim.enable = true;
-  programs.neovim.defaultEditor = true;
+  programs = {
+    mtr.enable = true;
+    neovim = {
+      enable = true;
+      defaultEditor = true;
+    };
+  };
 
-  services.openssh.enable = true;
+  services = {
+    openssh.enable = true;
+    qemuGuest.enable = true;
+  };
 
   nixpkgs.config.allowUnfree = true;
   nix.settings = {
@@ -351,7 +423,7 @@ ${HASH_LINE:+${HASH_LINE}}
 
   security.sudo = {
     enable = true;
-    wheelNeedsPassword = true;
+    wheelNeedsPassword = false;
   };
 
   system.stateVersion = "25.11";
