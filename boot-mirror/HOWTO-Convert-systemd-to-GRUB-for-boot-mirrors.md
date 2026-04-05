@@ -66,9 +66,11 @@ sudo nixos-rebuild boot
 sudo nixos-rebuild boot -I nixos-config=/etc/nixos/configuration.nix
 ```
 
-> Redundancy: By having two independent EFI partitions, you can lose either virtual disk in Proxmox and still hit a boot menu.
+> Redundancy: By having two independent EFI partitions, you can lose either disk and still get a boot menu.
 
-Btrfs Awareness: GRUB is significantly better at handling advanced Btrfs setups (like subvolumes and snapshots) than the more minimal systemd-boot.
+Btrfs Awareness:
+
+- GRUB is significantly better at handling advanced Btrfs setups (like subvolumes and snapshots) than the more minimal systemd-boot.
 
 6. Example
 
