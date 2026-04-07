@@ -19,6 +19,9 @@ Networking / Transfer / Diagnostics
 - socat, netcat-openbsd
 - jq, yq-go
 
+Programming languages
+- python3
+
 Storage / Filesystems
 - parted, gptfdisk (sgdisk), efibootmgr
 - btrfs-progs, e2fsprogs, xfsprogs

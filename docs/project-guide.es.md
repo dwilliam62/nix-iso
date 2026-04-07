@@ -64,7 +64,7 @@ Conjunto de herramientas incluido (resumen)
 - Particionado/arranque: parted, gptfdisk, efibootmgr
 - ZFS userland vía config.boot.zfs.package
 - Recuperación/diagnóstico: ddrescue, testdisk, smartmontools, hdparm, nvme-cli, pciutils, usbutils
-- CLI/UI: coreutils, busybox, ripgrep, (neo)vim, nano, tmux, curl, wget, rsync, jq, yq-go
+- CLI/UI: coreutils, busybox, ripgrep, (neo)vim, nano, tmux, curl, wget, rsync, jq, yq-go, python3
 - Snapshots/backups: snapper, btrbk
 - Docs offline: HTML (pandoc) + Markdown en /etc/nix-iso-docs
 

@@ -25,6 +25,9 @@ Red/Transferencia/Diagnóstico
 - socat, netcat-openbsd
 - jq, yq-go
 
+Lenguajes de programación
+- python3
+
 Almacenamiento / Sistemas de archivos
 - parted, gptfdisk (sgdisk), efibootmgr
 - btrfs-progs, e2fsprogs, xfsprogs

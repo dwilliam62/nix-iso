@@ -70,7 +70,7 @@ Included toolset (summary)
 - Partitioning/boot: parted, gptfdisk, efibootmgr
 - ZFS userland via config.boot.zfs.package to match the running kernel
 - Recovery/diagnostics: ddrescue, testdisk, smartmontools, hdparm, nvme-cli, pciutils, usbutils
-- CLI/UI: coreutils, busybox, ripgrep, (neo)vim, nano, tmux, curl, wget, rsync, jq, yq-go
+- CLI/UI: coreutils, busybox, ripgrep, (neo)vim, nano, tmux, curl, wget, rsync, jq, yq-go, python3
 - Snapshot/backup helpers: snapper, btrbk
 - Offline docs: pandoc-generated HTML + Markdown under /etc/nix-iso-docs
 
