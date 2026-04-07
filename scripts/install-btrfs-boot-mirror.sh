@@ -372,13 +372,12 @@ cat > "$CFG" <<NIXCONF
         ];
       };
     };
-    kernelModules = [ "z3fold" ];
-    kernelParams = [
-      "zswap.enabled=1"
-      "zswap.compressor=zstd"
-      "zswap.max_pool_percent=20"
-      "zswap.zpool=z3fold"
-    ];
+  };
+  zramSwap = {
+    enable = true;
+    algorithm = "zstd";
+    memoryPercent = 25;
+    priority = 100;
   };
 
   networking = {
