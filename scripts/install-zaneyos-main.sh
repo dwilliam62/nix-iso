@@ -29,7 +29,8 @@ CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
 # Define log file
-LOG_DIR="$(dirname "$0")"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LOG_DIR="$SCRIPT_DIR"
 LOG_FILE="${LOG_DIR}/install_$(date +"%Y-%m-%d_%H-%M-%S").log"
 
 mkdir -p "$LOG_DIR"
@@ -594,7 +595,7 @@ sed -i -E "s|^[[:space:]]*username[[:space:]]*=[[:space:]]*\"[^\"]*\";|    usern
 awk -v h="$hostName" '
   BEGIN { in_hosts=0; seen=0 }
   /^\s*hosts\s*=\s*\[/ { in_hosts=1 }
-  in_hosts && /"[^"]+\"/ {
+  in_hosts && /"[^"]+"/ {
     if (index($0, "\"" h "\"") > 0) seen=1
   }
   in_hosts && /\];/ {
@@ -608,7 +609,7 @@ awk -v h="$hostName" '
 
 # Update timezone in system.nix (robust quoting via Python helper)
 cp ./modules/core/system.nix ./modules/core/system.nix.bak
-python3 ./scripts/update_timezone.py ./modules/core/system.nix "$timezone" || {
+python3 "$SCRIPT_DIR/update_timezone.py" ./modules/core/system.nix "$timezone" || {
   print_error "Failed to update time.timeZone in modules/core/system.nix";
   exit 1;
 }
@@ -616,10 +617,10 @@ rm ./modules/core/system.nix.bak
 
 # Update variables in host file; support both old style and new zaneyos options block
 cp ./hosts/$hostName/variables.nix ./hosts/$hostName/variables.nix.bak
-python3 ./scripts/update_vars.py "./hosts/$hostName/variables.nix" \
+python3 "$SCRIPT_DIR/update_vars.py" "./hosts/$hostName/variables.nix" \
   "$gitUsername" "$gitEmail" "$hostName" "$profile" "$keyboardLayout" "$keyboardVariant" "$consoleKeyMap" || {
   print_error "Failed to update hosts/$hostName/variables.nix";
-  echo "Check the file exists and the script at ./scripts/update_vars.py is present.";
+  echo "Check the file exists and the script at $SCRIPT_DIR/update_vars.py is present.";
   exit 1;
 }
 rm ./hosts/$hostName/variables.nix.bak
