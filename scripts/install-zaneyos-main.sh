@@ -654,7 +654,7 @@ echo -e "${BLUE}Running nixos-install with ZaneyOS flake...${NC}"
 # Use nixos-install instead of nixos-rebuild to avoid filling live system's /nix/store
 # This builds everything to /mnt instead of the live system
 # Use --no-root-passwd to skip interactive password prompt and set it ourselves post-install
-nixos-install --flake /mnt/etc/nixos/zaneyos#${hostName} --option accept-flake-config true --no-root-passwd
+nixos-install --flake /mnt/etc/nixos/zaneyos#${profile} --option accept-flake-config true --no-root-passwd
 
 # Check the exit status of the last command (nixos-install)
 if [ $? -eq 0 ]; then
