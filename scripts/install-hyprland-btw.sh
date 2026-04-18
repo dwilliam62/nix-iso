@@ -298,8 +298,7 @@ cp "$LIVE_HWCFG" ./hardware-configuration.nix
 
 # Refresh flake.lock after modifications to avoid narHash mismatches
 print_header "Refreshing flake.lock"
-rm -f ./flake.lock
-nix flake lock --recreate-lock-file --option accept-flake-config true
+nix flake update --option accept-flake-config true
 
 # Install
 print_header "Starting NixOS Installation"
