@@ -641,35 +641,6 @@ rm -rf .git .gitmodules
 echo -e "${GREEN}✓ Flake prepared${NC}"
 echo
 
-print_header "Initiating NixOS Installation"
-printf "%s" "Ready to run nixos-install? [y/N]: "
-read -r REPLY
-if ! [[ "$REPLY" =~ ^[Yy]$ ]]; then
-  echo -e "${RED}Installation cancelled.${NC}"
-  exit 1
-fi
-
-echo
-echo -e "${BLUE}Running nixos-install with ZaneyOS flake...${NC}"
-# Use nixos-install instead of nixos-rebuild to avoid filling live system's /nix/store
-# This builds everything to /mnt instead of the live system
-# Use --no-root-passwd to skip interactive password prompt and set it ourselves post-install
-nixos-install --flake /mnt/etc/nixos/zaneyos#${profile} --option accept-flake-config true --no-root-passwd
-
-# Check the exit status of the last command (nixos-install)
-if [ $? -eq 0 ]; then
-  print_header "Post-Installation Setup"
-  
-  # Copy ZaneyOS to user home for convenient post-install access and edits
-  echo -e "${BLUE}Copying ZaneyOS to user home...${NC}"
-  mkdir -p /mnt/home/$systemUsername
-  rm -rf /mnt/home/$systemUsername/zaneyos
-  cp -r /mnt/etc/nixos/zaneyos /mnt/home/$systemUsername/zaneyos
-  # Fix ownership so user can edit/rebuild if needed
-  chroot /mnt chown -R $systemUsername:users /home/$systemUsername/zaneyos 2>/dev/null || true
-  echo -e "${GREEN}✓ ZaneyOS copied to /home/$systemUsername/zaneyos${NC}"
-  echo
-  
   print_header "Setting Passwords"
   
   # Set user password
@@ -704,16 +675,43 @@ if [ $? -eq 0 ]; then
     done
   fi
   
-  echo -e "${BLUE}Setting root password...${NC}"
-  sed -i "s|^root:[^:]*:|root:${ROOT_HASH}:|" /mnt/etc/shadow
-  echo -e "${GREEN}✓ Root password set${NC}"
+  echo -e "${BLUE}Injecting passwords into NixOS configuration...${NC}"
+  cat <<NIXEOF > ./hosts/$hostName/passwords.nix
+{
+  users.users."$systemUsername".initialHashedPassword = "$USER_HASH";
+  users.users.root.initialHashedPassword = "$ROOT_HASH";
+}
+NIXEOF
+  echo -e "${GREEN}✓ Passwords injected into ./hosts/$hostName/passwords.nix${NC}"
+  sed -i 's/\.\/hardware\.nix/\.\/hardware\.nix\n    \.\/passwords\.nix/g' ./hosts/$hostName/default.nix
+  echo
+print_header "Initiating NixOS Installation"
+printf "%s" "Ready to run nixos-install? [y/N]: "
+read -r REPLY
+if ! [[ "$REPLY" =~ ^[Yy]$ ]]; then
+  echo -e "${RED}Installation cancelled.${NC}"
+  exit 1
+fi
+
+echo
+echo -e "${BLUE}Running nixos-install with ZaneyOS flake...${NC}"
+# Use nixos-install instead of nixos-rebuild to avoid filling live system's /nix/store
+# This builds everything to /mnt instead of the live system
+# Use --no-root-passwd to skip interactive password prompt and set it ourselves post-install
+nixos-install --flake /mnt/etc/nixos/zaneyos#${profile} --option accept-flake-config true --no-root-passwd
+
+# Check the exit status of the last command (nixos-install)
+if [ $? -eq 0 ]; then
+  print_header "Post-Installation Setup"
   
-  # Set user password if provided
-  if [ -n "$USER_HASH" ]; then
-    echo -e "${BLUE}Setting password for user '$systemUsername'...${NC}"
-    sed -i "s|^${systemUsername}:[^:]*:|${systemUsername}:${USER_HASH}:|" /mnt/etc/shadow
-    echo -e "${GREEN}✓ User password set${NC}"
-  fi
+  # Copy ZaneyOS to user home for convenient post-install access and edits
+  echo -e "${BLUE}Copying ZaneyOS to user home...${NC}"
+  mkdir -p /mnt/home/$systemUsername
+  rm -rf /mnt/home/$systemUsername/zaneyos
+  cp -r /mnt/etc/nixos/zaneyos /mnt/home/$systemUsername/zaneyos
+  # Fix ownership so user can edit/rebuild if needed
+  chroot /mnt chown -R $systemUsername:users /home/$systemUsername/zaneyos 2>/dev/null || true
+  echo -e "${GREEN}✓ ZaneyOS copied to /home/$systemUsername/zaneyos${NC}"
   echo
   
   print_success_banner
