@@ -587,8 +587,10 @@ echo -e "${BLUE}Updating configuration files...${NC}"
 # Update flake.nix safely without removing existing hosts
 cp ./flake.nix ./flake.nix.bak
 
-# 1) Update username if present
+# 1) Update username, host, and profile
 sed -i -E "s|^[[:space:]]*username[[:space:]]*=[[:space:]]*\"[^\"]*\";|    username = \"${systemUsername}\";|" ./flake.nix
+sed -i -E "s|^[[:space:]]*host[[:space:]]*=[[:space:]]*\"[^\"]*\";|    host = \"${hostName}\";|" ./flake.nix
+sed -i -E "s|^[[:space:]]*profile[[:space:]]*=[[:space:]]*\"[^\"]*\";|    profile = \"${profile}\";|" ./flake.nix
 
 # 2) Ensure the new host is listed in the hosts array (append if missing)
 awk -v h="$hostName" '
