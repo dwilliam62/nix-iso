@@ -296,8 +296,10 @@ rm -f ./configuration.nix.bak
 # Copy hardware config
 cp "$LIVE_HWCFG" ./hardware-configuration.nix
 
-# Remove git markers so flake works with local path
-rm -rf ./.git ./.gitmodules 2>/dev/null || true
+# Refresh flake.lock after modifications to avoid narHash mismatches
+print_header "Refreshing flake.lock"
+rm -f ./flake.lock
+nix flake lock --recreate-lock-file --option accept-flake-config true
 
 # Install
 print_header "Starting NixOS Installation"
@@ -306,6 +308,9 @@ nixos-install --flake ".#$HOSTNAME" --option accept-flake-config true
 # Check if installation succeeded
 if [ $? -eq 0 ]; then
   print_header "Post-Installation Setup"
+
+  # Optionally remove git metadata from the installed config
+  rm -rf ./.git ./.gitmodules 2>/dev/null || true
   
   # Fix ownership of hyprland-btw directory (using UID/GID from mounted system)
   echo -e "${BLUE}Fixing ownership of hyprland-btw...${NC}"
