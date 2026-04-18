@@ -678,8 +678,8 @@ echo
   echo -e "${BLUE}Injecting passwords into NixOS configuration...${NC}"
   cat <<NIXEOF > ./hosts/$hostName/passwords.nix
 {
-  users.users."$systemUsername".initialHashedPassword = "$USER_HASH";
-  users.users.root.initialHashedPassword = "$ROOT_HASH";
+  users.users."$systemUsername".hashedPassword = "$USER_HASH";
+  users.users.root.hashedPassword = "$ROOT_HASH";
 }
 NIXEOF
   echo -e "${GREEN}✓ Passwords injected into ./hosts/$hostName/passwords.nix${NC}"
