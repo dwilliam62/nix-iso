@@ -637,8 +637,7 @@ git config --global --unset-all user.email
 echo -e "${GREEN}✓ Committed initial configuration to git${NC}"
 
 print_header "Preparing Flake for Installation"
-echo -e "${BLUE}Removing git metadata to treat flake as local path...${NC}"
-rm -rf .git .gitmodules
+echo -e "${BLUE}Keeping git metadata to preserve stable git flake semantics...${NC}"
 echo -e "${GREEN}✓ Flake prepared${NC}"
 echo
 
@@ -699,7 +698,7 @@ echo -e "${BLUE}Running nixos-install with ZaneyOS flake...${NC}"
 # Use nixos-install instead of nixos-rebuild to avoid filling live system's /nix/store
 # This builds everything to /mnt instead of the live system
 # Use --no-root-passwd to skip interactive password prompt and set it ourselves post-install
-nixos-install --flake /mnt/etc/nixos/zaneyos#${hostName} --option accept-flake-config true --no-root-passwd
+HOME=/root nixos-install --flake /mnt/etc/nixos/zaneyos#${hostName} --option accept-flake-config true --no-write-lock-file --no-root-passwd
 
 # Check the exit status of the last command (nixos-install)
 if [ $? -eq 0 ]; then
