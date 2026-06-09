@@ -373,7 +373,7 @@ rsync -rlptD --delete "$DDUBS_TARGET_ROOT/" "$USR_HOME_DIR/ddubsos/"
 echo
 echo "Starting installation from ddubsos flake for host '$HOSTNAME' ..."
 # Pass accept-flake-config to avoid prompts in environments without matching nix.conf
-nixos-install --flake "$DDUBS_TARGET_ROOT#$HOSTNAME" --option accept-flake-config true
+HOME=/root nixos-install --flake "$DDUBS_TARGET_ROOT#$HOSTNAME" --option accept-flake-config true --no-write-lock-file
 
 # Post-install: set the user's password if provided and fix ownership of ~/ddubsos
 if [ -n "$USER_HASH" ]; then

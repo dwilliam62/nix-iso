@@ -298,11 +298,11 @@ cp "$LIVE_HWCFG" ./hardware-configuration.nix
 
 # Refresh flake.lock after modifications to avoid narHash mismatches
 print_header "Refreshing flake.lock"
-nix flake update --option accept-flake-config true
+HOME=/root nix flake update --option accept-flake-config true
 
 # Install
 print_header "Starting NixOS Installation"
-nixos-install --flake ".#$HOSTNAME" --option accept-flake-config true
+HOME=/root nixos-install --flake ".#$HOSTNAME" --option accept-flake-config true --no-write-lock-file
 
 # Check if installation succeeded
 if [ $? -eq 0 ]; then
