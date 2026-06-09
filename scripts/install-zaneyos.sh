@@ -684,6 +684,8 @@ echo
 NIXEOF
   echo -e "${GREEN}✓ Passwords injected into ./hosts/$hostName/passwords.nix${NC}"
   sed -i 's/\.\/hardware\.nix/\.\/hardware\.nix\n    \.\/passwords\.nix/g' ./hosts/$hostName/default.nix
+  git add "./hosts/$hostName/passwords.nix" "./hosts/$hostName/default.nix"
+  echo -e "${GREEN}✓ Password module staged for git flake evaluation${NC}"
   echo
 print_header "Initiating NixOS Installation"
 printf "%s" "Ready to run nixos-install? [y/N]: "
