@@ -317,10 +317,15 @@ if [ $? -eq 0 ]; then
   USER_UID=$(awk -F: -v u="$USERNAME" '$1==u {print $3}' /mnt/etc/passwd)
   USER_GID=$(awk -F: -v u="$USERNAME" '$1==u {print $4}' /mnt/etc/passwd)
   if [ -n "$USER_UID" ] && [ -n "$USER_GID" ]; then
-    chown -R "$USER_UID:$USER_GID" "/mnt/home/$USERNAME/hyprland-btw"
-    echo -e "${GREEN}✓ Ownership fixed (UID:$USER_UID GID:$USER_GID)${NC}"
+    if chown -R "$USER_UID:$USER_GID" "/mnt/home/$USERNAME/hyprland-btw"; then
+      echo -e "${GREEN}✓ Ownership fixed (UID:$USER_UID GID:$USER_GID)${NC}"
+    else
+      echo -e "${YELLOW}⚠ Could not update ownership for /home/$USERNAME/hyprland-btw${NC}"
+      echo -e "${YELLOW}    After login, run:${NC} sudo chown -R $USERNAME:$(id -gn $USERNAME) /home/$USERNAME/hyprland-btw"
+    fi
   else
-    echo -e "${YELLOW}⚠ Could not determine user UID/GID, skipping ownership fix${NC}"
+    echo -e "${YELLOW}⚠ Could not determine user UID/GID for ownership fix${NC}"
+    echo -e "${YELLOW}    After login, run:${NC} sudo chown -R $USERNAME:$(id -gn $USERNAME) /home/$USERNAME/hyprland-btw"
   fi
   echo
   

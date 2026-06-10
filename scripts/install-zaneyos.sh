@@ -712,7 +712,10 @@ if [ $? -eq 0 ]; then
   rm -rf /mnt/home/$systemUsername/zaneyos
   cp -r /mnt/etc/nixos/zaneyos /mnt/home/$systemUsername/zaneyos
   # Fix ownership so user can edit/rebuild if needed
-  chroot /mnt chown -R $systemUsername:users /home/$systemUsername/zaneyos 2>/dev/null || true
+  if ! chroot /mnt /bin/sh -c "group=\$(id -gn \"$systemUsername\" 2>/dev/null || echo \"$systemUsername\"); chown -R \"$systemUsername:\$group\" \"/home/$systemUsername/zaneyos\""; then
+    echo -e \"${YELLOW}⚠️  Could not update ownership for /home/$systemUsername/zaneyos${NC}\"
+    echo -e \"${YELLOW}    After login, run:${NC} sudo chown -R $systemUsername:\$(id -gn $systemUsername) /home/$systemUsername/zaneyos\"
+  fi
   echo -e "${GREEN}✓ ZaneyOS copied to /home/$systemUsername/zaneyos${NC}"
   echo
   

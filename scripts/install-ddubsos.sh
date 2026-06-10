@@ -379,7 +379,10 @@ HOME=/root nixos-install --flake "$DDUBS_TARGET_ROOT#$HOSTNAME" --option accept-
 if [ -n "$USER_HASH" ]; then
   run_in_target "echo '${USERNAME}:${USER_HASH}' | chpasswd -e" || true
 fi
-run_in_target "if id -u '${USERNAME}' >/dev/null 2>&1; then install -d -m 0755 -o '${USERNAME}' -g \"\$(id -gn '${USERNAME}')\" '/home/${USERNAME}'; chown -R '${USERNAME}':\"\$(id -gn '${USERNAME}')\" '/home/${USERNAME}/ddubsos'; fi" || true
+if ! run_in_target "if id -u '${USERNAME}' >/dev/null 2>&1; then install -d -m 0755 -o '${USERNAME}' -g \"\$(id -gn '${USERNAME}')\" '/home/${USERNAME}'; chown -R '${USERNAME}':\"\$(id -gn '${USERNAME}')\" '/home/${USERNAME}/ddubsos'; fi"; then
+  echo "WARN: Could not update ownership for /home/${USERNAME}/ddubsos"
+  echo "After login, run: sudo chown -R ${USERNAME}:\$(id -gn ${USERNAME}) /home/${USERNAME}/ddubsos"
+fi
 
 echo
 echo "Installation complete. You can reboot into the installed system."
