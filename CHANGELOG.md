@@ -17,10 +17,9 @@ All notable changes to this project will be documented in this file.
   - Validate `flake.lock` before `nix flake update`; if it is missing, contains Git conflict markers, or is invalid JSON, remove it so Nix regenerates a clean lock
   - Fixes an install abort (`json.exception.parse_error.101 ... expected string literal`) when the cloned repo ships a lock with committed merge-conflict markers
   - Companion fix: repaired `dwilliam62/hyprland-btw` `main` (resolved the `flake.lock` conflict markers; commit 2f35446)
-- CI: disable the `update-flake-lock` workflow
-  - Renamed `.github/workflows/DISABLE.update-flake.yml` -> `.github/workflows/update-flake-lock.yml.disabled`
-  - Note: a `DISABLE.`/`DISABLED.` filename prefix does NOT disable a workflow; GitHub runs any `*.yml`/`*.yaml` under `.github/workflows/`. The weekly schedule and the `push`-on-`flake.nix` trigger were still active, producing automatic `flake.lock` commits (e.g. right after the chaotic-input removal push)
-  - `check-flake` and the release workflow remain active under the same naming convention (only `update-flake-lock` was disabled here)
+- CI: disable all GitHub Actions workflows (this branch builds ISOs locally; no CI is desired)
+  - Renamed every workflow to a non-`.yml` extension so GitHub ignores it: `update-flake-lock.yml.disabled`, `check-flake.yml.disabled`, `build-and-release.yml.disabled`
+  - Note: a `DISABLE.`/`DISABLED.` filename prefix does NOT disable a workflow; GitHub runs any `*.yml`/`*.yaml` under `.github/workflows/`, so the previous renames had no effect. `update-flake-lock` auto-committed `flake.lock` (weekly schedule + `push` on `flake.nix`) and `check-flake` ran `nix flake check` on every push/PR
 - Update flake for nix-iso project
   - Now uses NixOS v26.11
 
