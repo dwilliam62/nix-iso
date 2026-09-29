@@ -20,6 +20,14 @@ All notable changes to this project will be documented in this file.
 - CI: disable all GitHub Actions workflows (this branch builds ISOs locally; no CI is desired)
   - Renamed every workflow to a non-`.yml` extension so GitHub ignores it: `update-flake-lock.yml.disabled`, `check-flake.yml.disabled`, `build-and-release.yml.disabled`
   - Note: a `DISABLE.`/`DISABLED.` filename prefix does NOT disable a workflow; GitHub runs any `*.yml`/`*.yaml` under `.github/workflows/`, so the previous renames had no effect. `update-flake-lock` auto-committed `flake.lock` (weekly schedule + `push` on `flake.nix`) and `check-flake` ran `nix flake check` on every push/PR
+- ddubsos install (`scripts/install-ddubsos.sh`): pick and pin a GPU/profile per host
+  - Detect a VM (`systemd-detect-virt`) and pin the new host to `profile = "vm"` (GPU drivers disabled); on bare metal, prompt for a GPU profile (blank keeps the flake default)
+  - New `set_host_var` helper sets/replaces an attribute in `hosts/<host>/variables.nix`, inserting before the final closing brace only (the old `sddmWaylandEnable` append matched every brace-only line, e.g. nested list braces)
+  - Companion change in `dwilliams62/ddubsos` `flake.nix`: `hostProfileOverride` reads `profile` from `hosts/<host>/variables.nix`, overriding the flake-level default (previously `nvidia-laptop`)
+  - Fixes ddubsos install failure building `nvidia-open-595.45.04` for `linux-7.2.8` (`linux/of_gpio.h: No such file or directory`); ddubsos commits `012d273d`
+- Repair `dwilliams62/ddubsos` `flake.lock` (resolved committed merge-conflict markers; commit `7c3644ee`)
+  - The lock shipped with 20 unresolved 3-way conflict blocks, making it invalid JSON and aborting `nixos-install` (`json.exception.parse_error.101 ... expected string literal`)
+  - Resolved to the newer "Updated flake" side; validated with `nix flake lock` and `nix eval .#nixosConfigurations`
 - Update flake for nix-iso project
   - Now uses NixOS v26.11
 
