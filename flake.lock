@@ -26,27 +26,6 @@
         "type": "github"
       }
     },
-    "chaotic": {
-      "inputs": {
-        "flake-schemas": "flake-schemas",
-        "home-manager": "home-manager",
-        "nixpkgs": "nixpkgs"
-      },
-      "locked": {
-        "lastModified": 1790610543,
-        "narHash": "sha256-OIbWe7rANBR3nscjPOqPOn4QlPNJhqqkhB35ZiLa7rU=",
-        "owner": "chaotic-cx",
-        "repo": "nyx",
-        "rev": "ff3c71b06466357121cdc00ebd71a6b7085dc77e",
-        "type": "github"
-      },
-      "original": {
-        "owner": "chaotic-cx",
-        "ref": "nyxpkgs-unstable",
-        "repo": "nyx",
-        "type": "github"
-      }
-    },
     "crane": {
       "locked": {
         "lastModified": 1780099841,
@@ -96,41 +75,6 @@
         "type": "github"
       }
     },
-    "flake-schemas": {
-      "locked": {
-        "lastModified": 1780327564,
-        "narHash": "sha256-HiRPtA0spK+Dkgbhz/1zW9glXxNVB+L4Rj2VYmdawb8=",
-        "rev": "6cc9bd98891b1fc6bb2b8cb3277df8bc72799ca6",
-        "revCount": 149,
-        "type": "tarball",
-        "url": "https://api.flakehub.com/f/pinned/DeterminateSystems/flake-schemas/0.5.0/019e83cf-9af3-78b1-ac5b-70e68ad1efe1/source.tar.gz"
-      },
-      "original": {
-        "type": "tarball",
-        "url": "https://flakehub.com/f/DeterminateSystems/flake-schemas/%3D0.5.0.tar.gz"
-      }
-    },
-    "home-manager": {
-      "inputs": {
-        "nixpkgs": [
-          "chaotic",
-          "nixpkgs"
-        ]
-      },
-      "locked": {
-        "lastModified": 1790365885,
-        "narHash": "sha256-iQ0ebhiVo64NktTnwft9hNxlFu4j5cvljVxyJaEVIP4=",
-        "owner": "nix-community",
-        "repo": "home-manager",
-        "rev": "7b4c5ec4bedaf1e062bbc1bcaeddbc6bd242aa1b",
-        "type": "github"
-      },
-      "original": {
-        "owner": "nix-community",
-        "repo": "home-manager",
-        "type": "github"
-      }
-    },
     "nix-github-actions": {
       "inputs": {
         "nixpkgs": [
@@ -161,8 +105,9 @@
         "url": "https://releases.nixos.org/nixos/unstable/nixos-26.11pre1080855.7a0f122f5090/nixexprs.tar.zst"
       },
       "original": {
-        "type": "tarball",
-        "url": "https://channels.nixos.org/nixos-unstable/nixexprs.tar.zst"
+        "id": "nixpkgs",
+        "ref": "nixos-unstable",
+        "type": "indirect"
       }
     },
     "nixpkgs-lib": {
@@ -180,25 +125,10 @@
         "type": "github"
       }
     },
-    "nixpkgs_2": {
-      "locked": {
-        "lastModified": 1790578696,
-        "narHash": "sha256-EvoKOTtoIJ7Xflls2Nfo5WDcqjFJB0kuzwOz0nLWs0w=",
-        "rev": "7a0f122f5090cf4c2ade2a13a0e229d4e19ba71f",
-        "type": "tarball",
-        "url": "https://releases.nixos.org/nixos/unstable/nixos-26.11pre1080855.7a0f122f5090/nixexprs.tar.zst"
-      },
-      "original": {
-        "id": "nixpkgs",
-        "ref": "nixos-unstable",
-        "type": "indirect"
-      }
-    },
     "root": {
       "inputs": {
         "bcachefs-tools": "bcachefs-tools",
-        "chaotic": "chaotic",
-        "nixpkgs": "nixpkgs_2"
+        "nixpkgs": "nixpkgs"
       }
     },
     "rust-overlay": {

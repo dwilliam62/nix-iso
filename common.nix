@@ -74,6 +74,13 @@
     python3 # ensure python3 interpreter is available for installer helpers
   ];
 
+  # Enable ZRAM swap (compressed RAM). memoryPercent is a percentage of RAM,
+  # not an absolute size; 200 allows up to 2x RAM of compressed data.
+  zramSwap = {
+    enable = true;
+    memoryPercent = 200;
+  };
+
   # Enable guest services; systemd gates them to VMs only.
   services.qemuGuest.enable = true;
   services.spice-vdagentd.enable = true;

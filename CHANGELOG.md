@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 ## [2026-09-29] ddubsos-iso
 
 - Fixed `zaneyos-main.sh` syntax error
+- ZaneyOS installers: fix post-install ownership of `~/zaneyos` (`scripts/install-zaneyos-main.sh`, `scripts/install-zaneyos.sh`)
+  - The previous chroot-based fix failed with `chown: command not found`, because inside a chroot the NixOS tools live in `/run/current-system/sw/bin`, which is not on the default `PATH`; `~/zaneyos` was left owned by `root`
+  - Resolve the target user's UID/GID from `/mnt/etc/passwd` and run `chown -R` from the live system against `/mnt/home/<user>/zaneyos` (same proven approach as `install-hyprland-btw.sh`); the fallback hint is still printed if the UID/GID cannot be determined
+- Flake inputs: drop the unused `chaotic` (chaotic-nyx) input and its binary cache
+  - `common.nix` no longer imports the chaotic nyx module, so the input was dead weight
+  - Removed `https://chaotic-nyx.cachix.org/` and its public key from `nixConfig`; `https://nix-community.cachix.org/` is kept
+  - Regenerated `flake.lock` (removed `chaotic`, `chaotic/flake-schemas`, `chaotic/home-manager`, `chaotic/home-manager/nixpkgs`, `chaotic/nixpkgs`; deduped `nixpkgs_2` into `nixpkgs`, same revision)
+- Add ZRAM swap to `common.nix` (`zramSwap.enable = true`, `memoryPercent = 200`)
 - Update flake for nix-iso project
   - Now uses NixOS v26.11
 
