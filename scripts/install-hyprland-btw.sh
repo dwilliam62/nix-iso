@@ -321,11 +321,11 @@ if [ $? -eq 0 ]; then
       echo -e "${GREEN}✓ Ownership fixed (UID:$USER_UID GID:$USER_GID)${NC}"
     else
       echo -e "${YELLOW}⚠ Could not update ownership for /home/$USERNAME/hyprland-btw${NC}"
-      echo -e "${YELLOW}    After login, run:${NC} sudo chown -R $USERNAME:$(id -gn $USERNAME) /home/$USERNAME/hyprland-btw"
+      echo -e "${YELLOW}    After login, run:${NC} sudo chown -R $USERNAME:\$(id -gn $USERNAME) /home/$USERNAME/hyprland-btw"
     fi
   else
     echo -e "${YELLOW}⚠ Could not determine user UID/GID for ownership fix${NC}"
-    echo -e "${YELLOW}    After login, run:${NC} sudo chown -R $USERNAME:$(id -gn $USERNAME) /home/$USERNAME/hyprland-btw"
+    echo -e "${YELLOW}    After login, run:${NC} sudo chown -R $USERNAME:\$(id -gn $USERNAME) /home/$USERNAME/hyprland-btw"
   fi
   echo
   

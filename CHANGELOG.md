@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-09-29] ddubsos-iso
+
+- Fixed `zaneyos-main.sh` syntax error
+- Update flake for nix-iso project
+  - Now uses NixOS v26.11
+
 ## [2025-12-26] ddubsos-iso
 
 - ZaneyOS-next new host wasn't owned by user
