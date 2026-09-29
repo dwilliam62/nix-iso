@@ -186,6 +186,10 @@ prep_xfs() {
 print_header "hyprland-btw Installer"
 
 HOSTNAME=$(read_default "Hostname" "hyprland-btw")
+if [ "$HOSTNAME" = "default" ] || ! [[ "$HOSTNAME" =~ ^[A-Za-z0-9._-]+$ ]]; then
+  echo "Invalid hostname '$HOSTNAME': choose a name other than 'default' using letters, digits, '.', '_' or '-'" >&2
+  exit 1
+fi
 USERNAME=$(read_default "Username" "nixos")
 TIMEZONE=$(read_default "Timezone" "America/New_York")
 KEYBOARD=$(read_default "Keyboard layout" "us")
@@ -244,25 +248,11 @@ print_header "Configuring hyprland-btw"
 # Update configuration.nix
 cp ./configuration.nix ./configuration.nix.bak
 awk -v tz="$TIMEZONE" '/^  time\.timeZone = / { sub(/= "[^"]*"/, "= \"" tz "\""); } { print }' ./configuration.nix.bak > ./configuration.nix
-awk -v hn="$HOSTNAME" '/^    hostName = / { sub(/= "[^"]*"/, "= \"" hn "\""); } { print }' ./configuration.nix > ./configuration.nix.tmp && mv ./configuration.nix.tmp ./configuration.nix
 awk -v ckm="$KEYBOARD" -v kbl="$KEYBOARD" '
   /^  console\.keyMap = / { sub(/= "[^"]*"/, "= \"" ckm "\""); }
   /^    xserver\.xkb\.layout = / { sub(/= "[^"]*"/, "= \"" kbl "\""); }
   { print }
 ' ./configuration.nix > ./configuration.nix.tmp && mv ./configuration.nix.tmp ./configuration.nix
-
-# Set GPU drivers
-case "$GPU_PROFILE" in
-  amd)
-    awk '/^  drivers = \{/,/^  \};/ { if (/amdgpu\.enable =/) { sub(/= .+;/, "= true;"); } else if (/\.enable =/) { sub(/= .+;/, "= false;"); } } { print }' ./configuration.nix > ./configuration.nix.tmp && mv ./configuration.nix.tmp ./configuration.nix
-    ;;
-  intel)
-    awk '/^  drivers = \{/,/^  \};/ { if (/intel\.enable =/) { sub(/= .+;/, "= true;"); } else if (/\.enable =/) { sub(/= .+;/, "= false;"); } } { print }' ./configuration.nix > ./configuration.nix.tmp && mv ./configuration.nix.tmp ./configuration.nix
-    ;;
-  nvidia)
-    awk '/^  drivers = \{/,/^  \};/ { if (/nvidia\.enable =/) { sub(/= .+;/, "= true;"); } else if (/\.enable =/) { sub(/= .+;/, "= false;"); } } { print }' ./configuration.nix > ./configuration.nix.tmp && mv ./configuration.nix.tmp ./configuration.nix
-    ;;
-esac
 
 # Replace default dwilliams user with the selected username
 echo -e "${GREEN}Setting up user entry for $USERNAME...${NC}"
@@ -277,12 +267,46 @@ awk -v newuser="$USERNAME" '
 # If you want to switch from ly to greetd with tuigreet for better user filtering,
 # see the commented-out ly configuration and greetd setup in configuration.nix
 
-# Update flake.nix
-awk -v hn="$HOSTNAME" -v un="$USERNAME" '
-  /nixosConfigurations\.hyprland-btw = / { sub(/nixosConfigurations\.hyprland-btw/, "nixosConfigurations." hn); }
-  /users\."[^"]*" = import \.\/home\.nix;/ { sub(/users\."[^"]*"/, "users.\"" un "\""); }
+# Point the flake's Home Manager user at the chosen username. The flake names
+# the HM user from mkHost's `userName ? "dwilliams"` default (used for both
+# users.${userName} and specialArgs), so update that default.
+awk -v un="$USERNAME" '
+  /userName \? "dwilliams"/ { sub(/userName \? "dwilliams"/, "userName ? \"" un "\""); }
   { print }
 ' ./flake.nix > ./flake.nix.tmp && mv ./flake.nix.tmp ./flake.nix
+
+# Create/refresh the host directory. The flake auto-discovers every directory
+# under ./hosts and exposes nixosConfigurations.<dirname> for it, so this is
+# what makes `.#$HOSTNAME` exist. (The old `nixosConfigurations.hyprland-btw =`
+# rename no longer applies - hosts are discovered, not listed in flake.nix.)
+case "$GPU_PROFILE" in
+  amd)    DRV_AMD=true;  DRV_INTEL=false; DRV_NVIDIA=false; VM_GUEST=false ;;
+  intel)  DRV_AMD=false; DRV_INTEL=true;  DRV_NVIDIA=false; VM_GUEST=false ;;
+  nvidia) DRV_AMD=false; DRV_INTEL=false; DRV_NVIDIA=true;  VM_GUEST=false ;;
+  vm|*)   DRV_AMD=false; DRV_INTEL=false; DRV_NVIDIA=false; VM_GUEST=true  ;;
+esac
+echo -e "${GREEN}Configuring host '$HOSTNAME' in ./hosts/$HOSTNAME...${NC}"
+if [ "$HOSTNAME" != "default" ]; then
+  rm -rf "./hosts/$HOSTNAME"
+fi
+cp -r ./hosts/default "./hosts/$HOSTNAME"
+cat > "./hosts/$HOSTNAME/default.nix" <<HOSTEOF
+{...}: {
+  imports = [
+    ./hardware.nix
+  ];
+
+  networking.hostName = "$HOSTNAME";
+
+  drivers = {
+    amdgpu.enable = $DRV_AMD;
+    intel.enable = $DRV_INTEL;
+    nvidia.enable = $DRV_NVIDIA;
+  };
+
+  vm.guest-services.enable = $VM_GUEST;
+}
+HOSTEOF
 
 # Update home.nix
 awk -v un="$USERNAME" '
@@ -293,8 +317,15 @@ awk -v un="$USERNAME" '
 
 rm -f ./configuration.nix.bak
 
-# Copy hardware config
-cp "$LIVE_HWCFG" ./hardware-configuration.nix
+# Copy the machine's generated hardware config into the host directory.
+# hosts/<host>/default.nix imports ./hardware.nix, and the current flake has no
+# top-level hardware-configuration.nix, so the file must live under hosts/$HOSTNAME.
+cp "$LIVE_HWCFG" "./hosts/$HOSTNAME/hardware.nix"
+
+# Stage all changes. Nix builds a git flake from the *tracked* tree, so the new
+# hosts/$HOSTNAME directory (and the edited files) must be added, otherwise the
+# flake will not expose nixosConfigurations.$HOSTNAME.
+git add -A
 
 # Validate flake.lock: reject missing files, unresolved git merge-conflict
 # markers, or (when a parser is available) invalid JSON. Upstream copies have
@@ -319,6 +350,10 @@ if ! have_valid_lock; then
   rm -f ./flake.lock
 fi
 HOME=/root nix flake update --option accept-flake-config true
+
+# Re-stage in case flake.lock was regenerated (untracked files are invisible to
+# a git flake).
+git add -A
 
 # Install
 print_header "Starting NixOS Installation"
