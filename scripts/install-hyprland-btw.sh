@@ -296,8 +296,28 @@ rm -f ./configuration.nix.bak
 # Copy hardware config
 cp "$LIVE_HWCFG" ./hardware-configuration.nix
 
-# Refresh flake.lock after modifications to avoid narHash mismatches
+# Validate flake.lock: reject missing files, unresolved git merge-conflict
+# markers, or (when a parser is available) invalid JSON. Upstream copies have
+# shipped a flake.lock with committed conflict markers, which Nix cannot parse
+# ("json.exception.parse_error.101 ... expected string literal").
+have_valid_lock() {
+  [ -f ./flake.lock ] || return 1
+  if grep -qE '^(<<<<<<<|>>>>>>>|=======$)' ./flake.lock; then
+    return 1
+  fi
+  if command -v python3 >/dev/null 2>&1; then
+    python3 -c 'import json; json.load(open("flake.lock"))' >/dev/null 2>&1 || return 1
+  fi
+  return 0
+}
+
+# Refresh flake.lock after modifications to avoid narHash mismatches.
+# If it is missing or corrupt, drop it so Nix regenerates a clean lock.
 print_header "Refreshing flake.lock"
+if ! have_valid_lock; then
+  echo -e "${YELLOW}flake.lock missing or invalid; regenerating from scratch${NC}"
+  rm -f ./flake.lock
+fi
 HOME=/root nix flake update --option accept-flake-config true
 
 # Install
