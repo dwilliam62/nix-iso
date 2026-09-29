@@ -341,18 +341,60 @@ if [ -f "$DDUBS_LOCAL/hosts/$HOSTNAME/hardware.nix" ]; then
   merge_nfs_mount "$DDUBS_LOCAL/hosts/$HOSTNAME/hardware.nix" "$HOST_DIR/hardware.nix"
 fi
 
-# If running in a VM, force SDDM Wayland to true for this host (SDDM X11 often fails in VMs)
-if command -v systemd-detect-virt >/dev/null 2>&1 && systemd-detect-virt --vm --quiet; then
-  VARS_FILE="$HOST_DIR/variables.nix"
-  if [ -f "$VARS_FILE" ]; then
-    # Replace existing attribute if present
-    if grep -qE '^[[:space:]]*sddmWaylandEnable[[:space:]]*=' "$VARS_FILE"; then
-      sed -i -E 's/^[[:space:]]*sddmWaylandEnable[[:space:]]*=.*/  sddmWaylandEnable = true;/' "$VARS_FILE" || true
-    else
-      # Append before the closing brace
-      sed -i -E 's/^[[:space:]]*}\s*$/  sddmWaylandEnable = true;\n}/' "$VARS_FILE" || true
-    fi
+# Set or replace a top-level attribute in hosts/$HOSTNAME/variables.nix.
+# When the key is absent it is inserted before the final closing brace (only
+# the last line is matched, so nested `}` lines in the file are left alone).
+set_host_var() {
+  local file="$1" key="$2" value="$3"
+  [ -f "$file" ] || return 0
+  if grep -qE "^[[:space:]]*${key}[[:space:]]*=" "$file"; then
+    sed -i -E "s|^[[:space:]]*${key}[[:space:]]*=.*|  ${key} = ${value};|" "$file"
+  else
+    awk -v line="  ${key} = ${value};" '
+      { lines[NR] = $0 }
+      END {
+        for (i = 1; i <= NR; i++) {
+          if (i == NR && lines[i] ~ /^[[:space:]]*}[[:space:]]*$/) print line
+          print lines[i]
+        }
+      }' "$file" > "$file.tmp" && mv "$file.tmp" "$file"
   fi
+}
+
+# Detect the target profile. In a VM use the "vm" profile so the NVIDIA
+# driver is not pulled in (nvidia-open does not build against the current
+# latest kernel). flake.nix reads this from hosts/<host>/variables.nix
+# (`profile`), overriding the default `nvidia-laptop`. On bare metal we keep
+# the flake default unless the operator picks a profile.
+TARGET_PROFILE=""
+if command -v systemd-detect-virt >/dev/null 2>&1 && systemd-detect-virt --vm --quiet; then
+  TARGET_PROFILE="vm"
+  echo "Detected a virtual machine; selecting profile 'vm' (GPU drivers disabled)."
+else
+  echo
+  echo "Select GPU profile:"
+  echo "  1) amd   2) intel   3) nvidia   4) nvidia-laptop   5) amd-nvidia-hybrid   6) vm"
+  echo "  (blank = keep flake default)"
+  read -r -p "Choice [1-6]: " GPU_CHOICE
+  case "${GPU_CHOICE:-}" in
+    1) TARGET_PROFILE="amd" ;;
+    2) TARGET_PROFILE="intel" ;;
+    3) TARGET_PROFILE="nvidia" ;;
+    4) TARGET_PROFILE="nvidia-laptop" ;;
+    5) TARGET_PROFILE="amd-nvidia-hybrid" ;;
+    6) TARGET_PROFILE="vm" ;;
+    *) TARGET_PROFILE="" ;;
+  esac
+fi
+
+VARS_FILE="$HOST_DIR/variables.nix"
+if [ -n "$TARGET_PROFILE" ]; then
+  set_host_var "$VARS_FILE" profile "\"$TARGET_PROFILE\""
+  echo "Set hosts/$HOSTNAME profile = \"$TARGET_PROFILE\""
+fi
+# In a VM, force SDDM Wayland backend (SDDM X11 often fails in VMs)
+if [ "$TARGET_PROFILE" = "vm" ]; then
+  set_host_var "$VARS_FILE" sddmWaylandEnable "true"
 fi
 
 # Ensure the staged flake is treated as a path, not a git repo (so our new host is visible)
